@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Асистент Кебабці</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* Telegram gives its theme colours as --tg-theme-*; the fallbacks are for a browser preview. */
+:root{
+  --bg:var(--tg-theme-bg-color,#ffffff); --bg2:var(--tg-theme-secondary-bg-color,#f2f1ee);
+  --ink:var(--tg-theme-text-color,#1f1d1a); --muted:var(--tg-theme-hint-color,#7b766d);
+  --accent:var(--tg-theme-button-color,#c8411f); --accent-ink:var(--tg-theme-button-text-color,#ffffff);
+  --line:color-mix(in srgb,var(--muted) 25%,transparent);
+  --ok:#2f8f3a; --bad:#c0392b; --sent:#d68400;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:var(--tg-theme-bg-color,#1b1a18); --bg2:var(--tg-theme-secondary-bg-color,#121110);
+  --ink:var(--tg-theme-text-color,#efe9df); --muted:var(--tg-theme-hint-color,#9b958a);
+  --accent:var(--tg-theme-button-color,#ff7a52); --accent-ink:var(--tg-theme-button-text-color,#1a0f0a);
+  --ok:#6fd27a; --bad:#ff7b6b; --sent:#ffb347; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg2);color:var(--ink);font:15px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif}
+.app{max-width:640px;margin:0 auto;padding:12px max(12px,env(safe-area-inset-right)) 32px max(12px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:12px}
+header{display:flex;flex-direction:column;gap:6px;padding:4px 4px 0}
+h1{font-size:20px;margin:0}
+.sub{color:var(--muted);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--bg);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat b{font-size:22px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.stat.ok b{color:var(--ok)} .stat.bad b{color:var(--bad)}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--bg);border-radius:12px;padding:3px;gap:3px;position:sticky;top:0;z-index:2}
+.tabs button{border:0;background:transparent;color:var(--muted);font-family:inherit;font-weight:600;font-size:14px;padding:9px 4px;border-radius:9px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.card{background:var(--bg);border-radius:14px;padding:4px 0;display:flex;flex-direction:column}
+.group{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:12px 14px 4px}
+.item{display:grid;grid-template-columns:52px 1fr;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
+.group+.item{border-top:0}
+.t{font-variant-numeric:tabular-nums;font-weight:600}
+.t small{display:block;font-weight:400;font-size:11px;color:var(--muted)}
+.body{display:flex;flex-direction:column;gap:6px;min-width:0}
+.txt{word-wrap:break-word}
+.meta{font-size:12px;color:var(--muted)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:9px;margin-right:6px}
+.pill.sent{background:color-mix(in srgb,var(--sent) 18%,transparent);color:var(--sent)}
+.pill.done{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.pill.missed{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.acts{display:flex;flex-wrap:wrap;gap:6px}
+.acts button,.btn{border:1px solid var(--line);background:var(--bg2);color:var(--ink);font-family:inherit;font-weight:500;font-size:13px;padding:6px 10px;border-radius:9px;cursor:pointer}
+.acts .do{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.main{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600;padding:10px 14px;font-size:15px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.empty{padding:18px 14px;color:var(--muted)}
+form{display:flex;flex-direction:column;gap:10px;padding:14px}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink);background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%}
+textarea{min-height:64px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mem{padding:10px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.mem:first-child{border-top:0}
+.mem b{font-size:14px}
+.demo{background:color-mix(in srgb,var(--sent) 15%,transparent);color:var(--ink);border-radius:10px;padding:8px 12px;font-size:13px}
+.err{background:color-mix(in srgb,var(--bad) 15%,transparent);border-radius:10px;padding:8px 12px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1 id="hello">Добрий день, сер</h1>
+    <div class="sub" id="sub">Завантажую…</div>
+  </header>
+  <div id="demo" class="demo" hidden>Це приклад з вигаданими даними: апку відкрито не з Телеграма.</div>
+  <div id="err" class="err" hidden></div>
+  <div class="stats">
+    <div class="stat"><b id="sOpen">–</b><span>відкрито</span></div>
+    <div class="stat ok"><b id="sDone">–</b><span>зроблено за місяць</span></div>
+    <div class="stat bad"><b id="sMiss">–</b><span>пропущено за місяць</span></div>
+  </div>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-plan" aria-selected="true" data-tab="plan">План</button>
+    <button role="tab" id="tab-memory" aria-selected="false" data-tab="memory">Памʼять</button>
+    <button role="tab" id="tab-history" aria-selected="false" data-tab="history">Історія</button>
+  </div>
+
+  <section id="plan">
+    <div class="card" id="openList"></div>
+    <div class="card" style="margin-top:12px">
+      <form id="addForm">
+        <b>Нове нагадування</b>
+        <label>Про що нагадати<textarea id="aText" placeholder="Відправити пуш акції тижня"></textarea></label>
+        <div class="row">
+          <label>Дата<input type="date" id="aDate"></label>
+          <label>Час<input type="time" id="aTime" value="10:00"></label>
+        </div>
+        <label>Повтор<select id="aRepeat">
+          <option value="">Без повтору</option>
+          <option value="щодня">Щодня</option>
+          <option value="щопонеділка">Щопонеділка</option>
+          <option value="щовівторка">Щовівторка</option>
+          <option value="щосереди">Щосереди</option>
+          <option value="щочетверга">Щочетверга</option>
+          <option value="щоп'ятниці">Щопʼятниці</option>
+          <option value="щосуботи">Щосуботи</option>
+          <option value="щонеділі">Щонеділі</option>
+          <option value="1-го числа">1-го числа щомісяця</option>
+        </select></label>
+        <button class="btn main" type="submit">Поставити нагадування</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="memory" hidden>
+    <div class="card" id="memList"></div>
+    <div class="card" style="margin-top:12px">
+      <form id="memForm">
+        <b id="memTitle">Новий запис</b>
+        <input type="hidden" id="mOld">
+        <label>Тема<input id="mTopic" placeholder="Тема"></label>
+        <label>Факт<textarea id="mFact" placeholder="Що запамʼятати"></textarea></label>
+        <button class="btn main" type="submit">Зберегти</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="history" hidden>
+    <div class="card" id="histList"></div>
+  </section>
+</div>
+
+<script>
+var API = "https://__PROJECT_REF__.supabase.co/functions/v1/api";
+var TG = window.Telegram && Telegram.WebApp && Telegram.WebApp.initData ? Telegram.WebApp : null;
+if (TG) { TG.ready(); TG.expand(); }
+var DEMO = !TG;
+var state = null;
+var $ = function (id) { return document.getElementById(id); };
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+var KYIV = { timeZone: "Europe/Kyiv" };
+function dayKey(d) { return new Intl.DateTimeFormat("en-CA", KYIV).format(d); }
+function hm(d) { return new Intl.DateTimeFormat("uk-UA", Object.assign({ hour: "2-digit", minute: "2-digit", hourCycle: "h23" }, KYIV)).format(d); }
+function dayLabel(d) {
+  var k = dayKey(d), today = dayKey(new Date()), tomorrow = dayKey(new Date(Date.now() + 864e5));
+  if (k < today) return "Прострочено";
+  if (k === today) return "Сьогодні";
+  if (k === tomorrow) return "Завтра";
+  return new Intl.DateTimeFormat("uk-UA", Object.assign({ weekday: "long", day: "numeric", month: "long" }, KYIV)).format(d);
+}
+
+function demoData() {
+  var h = 36e5, now = Date.now();
+  return {
+    name: "Приклад", now: new Date().toISOString(),
+    open: [
+      { id: 1, text: "Відправити пуш акції тижня", due_at: new Date(now - 2 * h).toISOString(), status: "sent", repeat: null },
+      { id: 2, text: "Перевірити результат минулого пушу", due_at: new Date(now + 3 * h).toISOString(), status: "pending", repeat: null },
+      { id: 3, text: "Зібрати звіт за тиждень", due_at: new Date(now + 50 * h).toISOString(), status: "pending", repeat: null }
+    ],
+    closed: [
+      { id: 4, text: "Пуш про нову позицію меню", due_at: new Date(now - 26 * h).toISOString(), status: "done", closed_at: new Date(now - 25 * h).toISOString() },
+      { id: 5, text: "Пуш з купоном для тих, хто давно не був", due_at: new Date(now - 74 * h).toISOString(), status: "missed", closed_at: new Date(now - 70 * h).toISOString() }
+    ],
+    month: { done: 7, missed: 3 },
+    memory: [
+      { topic: "Приклад теми", fact: "Тут буде факт із вашої памʼяті." },
+      { topic: "Ще одна тема", fact: "Памʼять можна змінити або видалити прямо тут." }
+    ]
+  };
+}
+
+function call(action, args) {
+  if (DEMO) return Promise.resolve(state || demoData());
+  var body = Object.assign({ action: action, initData: TG.initData }, args || {});
+  return fetch(API, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+    .then(function (r) { return r.json(); })
+    .then(function (j) { if (j.error) throw new Error(j.error); return j; });
+}
+function run(action, args) {
+  $("err").hidden = true;
+  return call(action, args).then(render).catch(function (e) { $("err").textContent = e.message; $("err").hidden = false; });
+}
+
+function render(s) {
+  state = s;
+  var hour = Number(new Intl.DateTimeFormat("en-GB", Object.assign({ hour: "numeric", hourCycle: "h23" }, KYIV)).format(new Date()));
+  $("hello").textContent = (hour < 12 ? "Доброго ранку" : hour < 18 ? "Добрий день" : "Добрий вечір") + ", сер";
+  var sent = s.open.filter(function (r) { return r.status === "sent"; }).length;
+  $("sub").textContent = sent ? "Чекає вашого «Зроблено»: " + sent + "." : "Усе під контролем.";
+  $("sOpen").textContent = s.open.length;
+  $("sDone").textContent = s.month.done;
+  $("sMiss").textContent = s.month.missed;
+
+  var html = "", last = "";
+  s.open.forEach(function (r) {
+    var d = new Date(r.due_at), g = r.status === "sent" ? "Чекає «Зроблено»" : dayLabel(d);
+    if (g !== last) { html += '<div class="group">' + esc(g) + "</div>"; last = g; }
+    html += '<div class="item"><div class="t">' + hm(d) + (g === "Сьогодні" || g === "Завтра" || g === "Чекає «Зроблено»" ? "" : "<small>" + d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", timeZone: "Europe/Kyiv" }) + "</small>") + '</div><div class="body">' +
+      '<div class="txt">' + (r.status === "sent" ? '<span class="pill sent">надіслано</span>' : "") + esc(r.text) + "</div>" +
+      (r.repeat ? '<div class="meta">Повтор: ' + esc(r.repeat) + "</div>" : "") +
+      '<div class="acts"><button class="do" data-act="done" data-id="' + r.id + '">✓ Зроблено</button>' +
+      '<button data-act="snooze" data-to="hour" data-id="' + r.id + '">+1 година</button>' +
+      '<button data-act="snooze" data-to="tomorrow" data-id="' + r.id + '">Завтра</button>' +
+      '<button data-act="cancel" data-id="' + r.id + '">Скасувати</button></div></div></div>';
+  });
+  $("openList").innerHTML = html || '<div class="empty">Відкритих нагадувань немає. Поставте нове нижче або напишіть боту.</div>';
+
+  $("histList").innerHTML = s.closed.length ? s.closed.map(function (r) {
+    var d = new Date(r.due_at);
+    return '<div class="item"><div class="t">' + hm(d) + "<small>" + d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", timeZone: "Europe/Kyiv" }) + '</small></div><div class="body"><div class="txt"><span class="pill ' + r.status + '">' + (r.status === "done" ? "зроблено" : "пропущено") + "</span>" + esc(r.text) + "</div>" +
+      (r.status === "missed" ? '<div class="acts"><button data-act="done" data-id="' + r.id + '">Насправді зроблено</button></div>' : "") + "</div></div>";
+  }).join("") : '<div class="empty">За два тижні ще нічого не закрито.</div>';
+
+  $("memList").innerHTML = s.memory.length ? s.memory.map(function (m, i) {
+    return '<div class="mem"><b>' + esc(m.topic) + '</b><div class="txt">' + esc(m.fact) + '</div><div class="acts"><button data-mem="edit" data-i="' + i + '">Змінити</button><button data-mem="del" data-i="' + i + '">Видалити</button></div></div>';
+  }).join("") : '<div class="empty">Памʼять порожня. Надішліть боту .txt файл або додайте запис нижче.</div>';
+}
+
+document.addEventListener("click", function (e) {
+  var b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.tab) {
+    ["plan", "memory", "history"].forEach(function (t) { $(t).hidden = t !== b.dataset.tab; $("tab-" + t).setAttribute("aria-selected", String(t === b.dataset.tab)); });
+    return;
+  }
+  if (b.dataset.act) { run(b.dataset.act, { id: Number(b.dataset.id), to: b.dataset.to }); return; }
+  if (b.dataset.mem) {
+    var m = state.memory[Number(b.dataset.i)];
+    if (b.dataset.mem === "edit") { $("mOld").value = m.topic; $("mTopic").value = m.topic; $("mFact").value = m.fact; $("memTitle").textContent = "Змінити запис"; $("mTopic").focus(); }
+    else if (b.dataset.confirm === "1") run("memory_delete", { topic: m.topic });
+    else { b.dataset.confirm = "1"; b.textContent = "Точно видалити?"; }
+  }
+});
+
+$("addForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  run("add", { text: $("aText").value, date: $("aDate").value, time: $("aTime").value, repeat: $("aRepeat").value })
+    .then(function () { if ($("err").hidden) $("aText").value = ""; });
+});
+$("memForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+  run("memory_save", { topic: $("mTopic").value, fact: $("mFact").value, old: $("mOld").value })
+    .then(function () { if ($("err").hidden) { $("mOld").value = ""; $("mTopic").value = ""; $("mFact").value = ""; $("memTitle").textContent = "Новий запис"; } });
+});
+$("aRepeat").addEventListener("change", function () { $("aDate").disabled = !!this.value; });
+$("aDate").value = dayKey(new Date());
+$("demo").hidden = !DEMO;
+run("overview");
+</script>
+</body>
+</html>
