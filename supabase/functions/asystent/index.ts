@@ -8,7 +8,7 @@ import { FALLBACK_PROMPT } from "./prompt.ts";
 import { DAYS, fmt, fromKyiv, kyiv, kyivDay, parseWhen, two } from "../_shared/time.ts";
 
 const HOUR = 3600_000;
-const APP_URL = Deno.env.get("APP_URL") ?? "https://kebabtsiaua-prog.github.io/kebabtsia-asystent/";
+const APP_URL = Deno.env.get("APP_URL") ?? "https://kebabtsiaua-prog.github.io/kebabtsia-asystent-marketing/";
 const openApp = [{ text: "Відкрити апку", web_app: { url: APP_URL } }];
 const MAX_NAGS = 3;
 const HISTORY = 16;
