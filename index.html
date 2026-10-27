@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Асистент Кебабці</title>
+<title>Кебабця Маркетинг Асистент</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 /* Telegram gives its theme colours as --tg-theme-*; the fallbacks are for a browser preview. */
@@ -67,7 +67,7 @@ textarea{min-height:64px;resize:vertical}
 <body>
 <div class="app">
   <header>
-    <h1 id="hello">Добрий день, сер</h1>
+    <h1 id="hello">Привіт</h1>
     <div class="sub" id="sub">Завантажую…</div>
   </header>
   <div id="demo" class="demo" hidden>Це приклад з вигаданими даними: апку відкрито не з Телеграма.</div>
@@ -163,7 +163,7 @@ function demoData() {
     ],
     month: { done: 7, missed: 3 },
     memory: [
-      { topic: "Приклад теми", fact: "Тут буде факт із вашої памʼяті." },
+      { topic: "Приклад теми", fact: "Тут буде факт із твоєї памʼяті." },
       { topic: "Ще одна тема", fact: "Памʼять можна змінити або видалити прямо тут." }
     ]
   };
@@ -184,9 +184,9 @@ function run(action, args) {
 function render(s) {
   state = s;
   var hour = Number(new Intl.DateTimeFormat("en-GB", Object.assign({ hour: "numeric", hourCycle: "h23" }, KYIV)).format(new Date()));
-  $("hello").textContent = (hour < 12 ? "Доброго ранку" : hour < 18 ? "Добрий день" : "Добрий вечір") + ", сер";
+  $("hello").textContent = (hour < 12 ? "Доброго ранку" : hour < 18 ? "Добрий день" : "Добрий вечір") + (s.name ? ", " + s.name.split(" ")[0] : "") + "!";
   var sent = s.open.filter(function (r) { return r.status === "sent"; }).length;
-  $("sub").textContent = sent ? "Чекає вашого «Зроблено»: " + sent + "." : "Усе під контролем.";
+  $("sub").textContent = sent ? "Чекає твого «Зроблено»: " + sent + "." : "Усе під контролем.";
   $("sOpen").textContent = s.open.length;
   $("sDone").textContent = s.month.done;
   $("sMiss").textContent = s.month.missed;
@@ -203,7 +203,7 @@ function render(s) {
       '<button data-act="snooze" data-to="tomorrow" data-id="' + r.id + '">Завтра</button>' +
       '<button data-act="cancel" data-id="' + r.id + '">Скасувати</button></div></div></div>';
   });
-  $("openList").innerHTML = html || '<div class="empty">Відкритих нагадувань немає. Поставте нове нижче або напишіть боту.</div>';
+  $("openList").innerHTML = html || '<div class="empty">Відкритих нагадувань немає. Постав нове нижче або напиши боту.</div>';
 
   $("histList").innerHTML = s.closed.length ? s.closed.map(function (r) {
     var d = new Date(r.due_at);
@@ -213,7 +213,7 @@ function render(s) {
 
   $("memList").innerHTML = s.memory.length ? s.memory.map(function (m, i) {
     return '<div class="mem"><b>' + esc(m.topic) + '</b><div class="txt">' + esc(m.fact) + '</div><div class="acts"><button data-mem="edit" data-i="' + i + '">Змінити</button><button data-mem="del" data-i="' + i + '">Видалити</button></div></div>';
-  }).join("") : '<div class="empty">Памʼять порожня. Надішліть боту .txt файл або додайте запис нижче.</div>';
+  }).join("") : '<div class="empty">Памʼять порожня. Надішли боту .txt файл або додай запис нижче.</div>';
 }
 
 document.addEventListener("click", function (e) {

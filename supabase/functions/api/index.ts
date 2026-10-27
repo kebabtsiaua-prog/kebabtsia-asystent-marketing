@@ -63,15 +63,15 @@ async function handle(tgId: number, b: any) {
 
     case "add": {
       const text = String(b.text ?? "").trim();
-      must(text, "Напишіть, про що нагадати");
+      must(text, "Напиши, про що нагадати");
       const time = String(b.time ?? "");
-      must(/^\d{1,2}:\d{2}$/.test(time), "Вкажіть час");
+      must(/^\d{1,2}:\d{2}$/.test(time), "Вкажи час");
       const repeat = String(b.repeat ?? "");
       let when;
       if (repeat) when = parseWhen(`${repeat} ${time}`);
       else {
         const m = String(b.date ?? "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        must(m, "Вкажіть дату");
+        must(m, "Вкажи дату");
         when = parseWhen(`${m![3]}.${m![2]}.${m![1]} ${time}`);
         must(when && when.due.getTime() > Date.now() - 60_000, "Цей час уже минув");
       }
@@ -126,13 +126,13 @@ Deno.serve(async (req) => {
   try {
     const b = await req.json();
     const user = await telegramUser(String(b.initData ?? ""));
-    if (!user) return json({ error: "Відкрийте апку через свого бота в Телеграмі." }, 401);
+    if (!user) return json({ error: "Відкрий апку через свого бота в Телеграмі." }, 401);
     const { data: person } = await db.from("as_people").select("tg_id").eq("tg_id", user.id).maybeSingle();
-    if (!person) return json({ error: "Спершу натисніть /start у боті." }, 403);
+    if (!person) return json({ error: "Спершу натисни /start у боті." }, 403);
     return json(await handle(user.id, b));
   } catch (e) {
     if (e instanceof Fail) return json({ error: e.message }, 400);
     console.error(e);
-    return json({ error: "Помилка сервера. Спробуйте ще раз." }, 500);
+    return json({ error: "Помилка сервера. Спробуй ще раз." }, 500);
   }
 });

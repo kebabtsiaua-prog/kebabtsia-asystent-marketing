@@ -67,8 +67,10 @@ async function system(tgId: number) {
   ].join("\n");
   // The prompt, locations and memory change rarely and are cached; the data block (time, reminders) goes after them.
   const prompt = (await kvGet<string>("prompt")) ?? FALLBACK_PROMPT;
+  const { data: skills } = await db.from("as_kv").select("key,value").like("key", "skill:%").order("key");
   const [stable] = prompt
     .replace("{{ЛОКАЦІЇ}}", locs.map((l) => `- ${l.name}${l.aliases?.length ? ` (також: ${l.aliases.join(", ")})` : ""}`).join("\n") || "(ще не завантажені)")
+    .replace("{{СКІЛИ}}", (skills ?? []).map((k) => `--- ${k.key.slice(6)} ---\n${k.value}`).join("\n\n") || "(поки немає)")
     .replace("{{ПАМʼЯТЬ}}", (mem ?? []).map((m) => `- ${m.topic}: ${m.fact}`).join("\n") || "(поки порожньо)")
     .split("{{ДАНІ}}");
   return [
@@ -126,7 +128,7 @@ async function carryOut(tgId: number, answer: string): Promise<{ text: string; k
       const when = parseWhen(parts[0] ?? "");
       const text = parts.slice(2).join(" | ") || parts[1] || "";
       if (!when || !text) {
-        notes.push(`Не зрозумів час нагадування «${esc(parts[0] ?? "")}». Напишіть, наприклад, «29.10 о 18:00».`);
+        notes.push(`Не зрозумів час нагадування «${esc(parts[0] ?? "")}». Напиши, наприклад, «29.10 о 18:00».`);
         continue;
       }
       const { data } = await db.from("as_reminders").insert({ tg_id: tgId, text, due_at: when.due.toISOString(), repeat: when.repeat }).select().single();
@@ -176,8 +178,8 @@ async function converse(chat: number, tgId: number, content: Content[], logText:
 
 // ---------- Messages ----------
 
-const HELP = "Пишіть мені звичайними словами: «нагадай завтра о 18:00 відправити пуш групі 211», «що в мене на четвер?», «запамʼятай: …».\n\n" +
-  "Кнопка «Апка» внизу: план, нагадування і памʼять на одному екрані.\n/plan — усі нагадування\n/pamyat — що я памʼятаю\n\nНалаштування надсилайте .txt файлами: промт, точки (<code>назва | місто | інші назви</code>) і памʼять (<code>тема | факт</code>).";
+const HELP = "Пиши мені звичайними словами: «нагадай завтра о 18:00 відправити пуш групі 211», «що в мене на четвер?», «запамʼятай: …».\n\n" +
+  "Кнопка «Апка» внизу: план, нагадування і памʼять на одному екрані.\n/plan — усі нагадування\n/pamyat — що я памʼятаю\n\nНалаштування надсилай .txt файлами: промт, точки (<code>назва | місто | інші назви</code>), памʼять (<code>тема | факт</code>) і скіли (у назві файлу слово skill або скіл).";
 
 // deno-lint-ignore no-explicit-any
 async function onMessage(msg: any) {
@@ -187,11 +189,11 @@ async function onMessage(msg: any) {
   let me = await person(msg.from.id);
   if (!me && text.startsWith("/start")) me = await claimOwner(msg.from);
   if (!me) {
-    await send(chat, "Це особистий асистент. Доступ лише для власника.");
+    await send(chat, "Це особистий асистент. Доступ лише для власника бота.");
     return;
   }
   if (text.startsWith("/start")) {
-    await send(chat, `Вітаю, сер. Системи онлайн. Я стежу за пушами й задачами і не відстану, поки не натиснете «Зроблено».\n\n${HELP}`, [openApp]);
+    await send(chat, `Привіт, ${esc(me.name)}! Я Кебабця Маркетинг Асистент. Нагадую про пуші й задачі і не відпускаю, поки не натиснеш «Зроблено». А ще допомагаю з ідеями, аналізом і стратегією.\n\n${HELP}`, [openApp]);
     return;
   }
   if (text.startsWith("/plan")) {
@@ -210,7 +212,7 @@ async function onMessage(msg: any) {
     return;
   }
   if (msg.voice || msg.audio || msg.video_note) {
-    await send(chat, "Голосові поки не розбираю, сер. Натисніть на голосове → «Розшифрувати» в Телеграмі й перешліть текст або напишіть коротко.");
+    await send(chat, "Голосові поки не розбираю. Натисни на голосове → «Розшифрувати» в Телеграмі й перешли текст або напиши коротко.");
     return;
   }
   if (msg.photo?.length) {
@@ -225,17 +227,18 @@ async function onMessage(msg: any) {
   if (text) await converse(chat, me.tg_id, [{ type: "text", text }], text);
 }
 
-// A .txt file becomes, after «Так»: the system prompt (name or caption says promt/промт), the locations (lokatsii/точки:
+// A .txt file becomes, after «Так»: the system prompt (name or caption says promt/промт), a skill (skill/скіл), the locations (lokatsii/точки:
 // «назва | місто | інші назви»), or memory (anything else: «тема | факт»). Business data lives here, not in the repository.
 type Pending =
   | { kind: "prompt"; text: string }
+  | { kind: "skill"; name: string; text: string }
   | { kind: "locations"; rows: { name: string; city: string; aliases: string[] }[] }
   | { kind: "memory"; rows: { topic: string; fact: string }[] };
 
 // deno-lint-ignore no-explicit-any
 async function onDocument(chat: number, me: Person, doc: any, caption: string) {
   if (!/\.(txt|md)$/i.test(doc.file_name ?? "")) {
-    await send(chat, "Поки читаю тільки .txt файли: промт, точки або памʼять.");
+    await send(chat, "Поки читаю тільки .txt файли: промт, точки, памʼять або скіл.");
     return;
   }
   const { bytes } = await tgFile(doc.file_id);
@@ -247,6 +250,10 @@ async function onDocument(chat: number, me: Person, doc: any, caption: string) {
   if (/promt|prompt|промт/.test(label)) {
     pending = { kind: "prompt", text };
     preview = `Новий промт: ${text.length} символів.${text.includes("{{ДАНІ}}") ? "" : "\nУвага: у ньому немає {{ДАНІ}}, тоді я не бачитиму час і нагадування."}\n\n<i>${esc(text.slice(0, 300))}…</i>`;
+  } else if (/skill|скіл/.test(label)) {
+    const name = String(doc.file_name).replace(/\.(txt|md)$/i, "").replace(/^(skill|скіл)[-_ ]*/i, "") || "скіл";
+    pending = { kind: "skill", name, text };
+    preview = `Новий скіл «${esc(name)}»: ${text.length} символів. Якщо скіл з такою назвою вже є, заміню.\n\n<i>${esc(text.slice(0, 300))}…</i>`;
   } else if (/lokats|lokac|точк|локац/.test(label)) {
     const locs = rows.filter((p) => p[0] && p[1]).map((p) => ({
       name: p[0], city: p[1], aliases: (p[2] ?? "").split(",").map((a) => a.trim()).filter(Boolean),
@@ -259,7 +266,7 @@ async function onDocument(chat: number, me: Person, doc: any, caption: string) {
     pending = { kind: "memory", rows: mem };
     preview = `Знайшов ${mem.length} записів для памʼяті. Теми, що вже є, оновлю.\n\n${mem.slice(0, 8).map((r) => `• <b>${esc(r.topic)}</b>: ${esc(r.fact.slice(0, 120))}`).join("\n")}${mem.length > 8 ? `\n… і ще ${mem.length - 8}` : ""}`;
   }
-  if (pending.kind !== "prompt" && !pending.rows.length) {
+  if ((pending.kind === "memory" || pending.kind === "locations") && !pending.rows.length) {
     await send(chat, "У файлі немає рядків з «|». Для памʼяті: «тема | факт», для точок: «назва | місто | інші назви».");
     return;
   }
@@ -299,6 +306,9 @@ async function onCallback(cb: any) {
       if (p.kind === "prompt") {
         await kvSet("prompt", p.text);
         await edit("✓ Новий промт збережено. Діє з наступного повідомлення.");
+      } else if (p.kind === "skill") {
+        await kvSet(`skill:${p.name}`, p.text);
+        await edit(`✓ Скіл «${esc(p.name)}» збережено. Діє з наступного повідомлення.`);
       } else if (p.kind === "locations") {
         await db.from("locations").upsert(p.rows.map((r) => ({ ...r, active: true })), { onConflict: "name" });
         await edit(`✓ Зберіг ${p.rows.length} точок.`);
@@ -367,7 +377,7 @@ async function tick() {
     if (r.msg_id) await tg("editMessageReplyMarkup", { chat_id: r.tg_id, message_id: r.msg_id, reply_markup: { inline_keyboard: [] } });
     if (r.nags >= MAX_NAGS) {
       await db.from("as_reminders").update({ status: "missed", closed_at: new Date(now).toISOString() }).eq("id", r.id);
-      await send(r.tg_id, `Позначив як пропущене: ${esc(r.text)}\nЯкщо все ж зроблено, напишіть, і я виправлю.`);
+      await send(r.tg_id, `Позначив як пропущене: ${esc(r.text)}\nЯкщо все ж зроблено, напиши, і я виправлю.`);
       await scheduleNext(r);
       missed++;
       continue;
