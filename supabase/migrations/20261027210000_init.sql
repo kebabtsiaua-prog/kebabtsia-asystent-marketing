@@ -5,7 +5,7 @@ grant usage on schema public to service_role;
 alter default privileges in schema public grant select, insert, update, delete on tables to service_role;
 alter default privileges in schema public grant usage, select on sequences to service_role;
 
--- Locations: the owner sends them to the bot as a .txt file (name | city | other names), so none are written here.
+-- Locations: shared with the «Відгуки» bot, which owns and edits them. This only creates the table if it is missing.
 create table if not exists locations (
   id      serial primary key,
   name    text not null unique,

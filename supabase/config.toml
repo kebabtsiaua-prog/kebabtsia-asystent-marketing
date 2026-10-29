@@ -4,5 +4,5 @@ project_id = "kebabtsia-asystent"
 [functions.asystent]
 verify_jwt = false
 
-[functions.api]
+[functions.asystent-api]
 verify_jwt = false

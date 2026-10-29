@@ -8,10 +8,12 @@
 |---|---|---|
 | Апка (екрани) | `index.html`, GitHub Pages | сама, після кожної зміни в `main` |
 | Бот (розмова, нагадування) | `supabase/functions/asystent` | GitHub Actions → Supabase |
-| Сервер апки | `supabase/functions/api` | GitHub Actions → Supabase |
+| Сервер апки | `supabase/functions/asystent-api` | GitHub Actions → Supabase |
 | База даних і щохвилинна перевірка нагадувань | `supabase/migrations` | GitHub Actions → Supabase |
 
 Усе працює в хмарі. Компʼютер для роботи бота не потрібен.
+
+Бот живе в тому самому проєкті Supabase, що й бот «Відгуки», але має свої таблиці (`as_*`) і свої функції (`asystent`, `asystent-api`). Таблиця точок `locations` спільна: її веде бот «Відгуки», асистент лише читає. Деплой цього репозиторію не чіпає нічого з «Відгуків».
 
 ## Секрети
 
@@ -19,7 +21,6 @@
 
 **GitHub → Settings → Secrets and variables → Actions → New repository secret**
 - `SUPABASE_ACCESS_TOKEN`: Supabase → аватар → Account preferences → Access Tokens → Generate new token.
-- `SUPABASE_DB_PASSWORD`: пароль бази, який задали при створенні проєкту Supabase.
 
 **Supabase → Edge Functions → Secrets**
 - `ASYSTENT_BOT_TOKEN`: токен бота від @BotFather.
@@ -31,9 +32,9 @@
 - Промт зберігається в базі (`as_kv`, ключ `prompt`); у коді лише запасний короткий (`supabase/functions/asystent/prompt.ts`). Перед кожною відповіддю бот підставляє точки, скіли, памʼять і відкриті нагадування.
 - Щохвилини база (pg_cron) викликає `asystent?tick=1`: бот надсилає нагадування з кнопками «Зроблено / +1 година / Завтра». Без «Зроблено» нагадує щогодини, тричі, потім позначає «пропущено».
 - О 9:00 за Києвом план на день, 1-го числа ще й підсумок минулого місяця.
-- Налаштування надсилаються боту .txt файлами і після «Так» лежать тільки в базі: промт (у назві `promt`), точки (`lokatsii`: `назва | місто | інші назви`), памʼять (`тема | факт`), скіли (у назві `skill`). Бізнес-даних у коді немає.
+- Налаштування надсилаються боту .txt файлами і після «Так» лежать тільки в базі: промт (у назві `promt`), памʼять (`тема | факт`), скіли (у назві `skill`). Бізнес-даних у коді немає.
 - Апка: кнопка «Апка» внизу чату. План, нагадування, історія, памʼять.
 
 ## Якщо все зламалось
 
-Код повністю в цьому репозиторії. Новий проєкт Supabase піднімається так: вставити два секрети GitHub і два секрети Supabase, замінити `__PROJECT_REF__` (або старий код проєкту) в `index.html` і `.github/workflows/*.yml`, запустити Actions → «Deploy server» → Run workflow.
+Код повністю в цьому репозиторії. Новий проєкт Supabase піднімається так: вставити секрет GitHub і два секрети Supabase, замінити код проєкту `obpmsgxanigythxkvrmh` в `index.html` і `.github/workflows/*.yml`, запустити Actions → «Deploy server» → Run workflow.

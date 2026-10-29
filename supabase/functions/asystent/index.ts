@@ -179,7 +179,7 @@ async function converse(chat: number, tgId: number, content: Content[], logText:
 // ---------- Messages ----------
 
 const HELP = "Пиши мені звичайними словами: «нагадай завтра о 18:00 відправити пуш групі 211», «що в мене на четвер?», «запамʼятай: …».\n\n" +
-  "Кнопка «Апка» внизу: план, нагадування і памʼять на одному екрані.\n/plan — усі нагадування\n/pamyat — що я памʼятаю\n\nНалаштування надсилай .txt файлами: промт, точки (<code>назва | місто | інші назви</code>), памʼять (<code>тема | факт</code>) і скіли (у назві файлу слово skill або скіл).";
+  "Кнопка «Апка» внизу: план, нагадування і памʼять на одному екрані.\n/plan — усі нагадування\n/pamyat — що я памʼятаю\n\nНалаштування надсилай .txt файлами: промт, памʼять (<code>тема | факт</code>) і скіли (у назві файлу слово skill або скіл).";
 
 // deno-lint-ignore no-explicit-any
 async function onMessage(msg: any) {
@@ -227,18 +227,17 @@ async function onMessage(msg: any) {
   if (text) await converse(chat, me.tg_id, [{ type: "text", text }], text);
 }
 
-// A .txt file becomes, after «Так»: the system prompt (name or caption says promt/промт), a skill (skill/скіл), the locations (lokatsii/точки:
-// «назва | місто | інші назви»), or memory (anything else: «тема | факт»). Business data lives here, not in the repository.
+// A .txt file becomes, after «Так»: the system prompt (name or caption says promt/промт), a skill (skill/скіл),
+// or memory (anything else: «тема | факт»). Business data lives here, not in the repository.
 type Pending =
   | { kind: "prompt"; text: string }
   | { kind: "skill"; name: string; text: string }
-  | { kind: "locations"; rows: { name: string; city: string; aliases: string[] }[] }
   | { kind: "memory"; rows: { topic: string; fact: string }[] };
 
 // deno-lint-ignore no-explicit-any
 async function onDocument(chat: number, me: Person, doc: any, caption: string) {
   if (!/\.(txt|md)$/i.test(doc.file_name ?? "")) {
-    await send(chat, "Поки читаю тільки .txt файли: промт, точки, памʼять або скіл.");
+    await send(chat, "Поки читаю тільки .txt файли: промт, памʼять або скіл.");
     return;
   }
   const { bytes } = await tgFile(doc.file_id);
@@ -255,19 +254,17 @@ async function onDocument(chat: number, me: Person, doc: any, caption: string) {
     pending = { kind: "skill", name, text };
     preview = `Новий скіл «${esc(name)}»: ${text.length} символів. Якщо скіл з такою назвою вже є, заміню.\n\n<i>${esc(text.slice(0, 300))}…</i>`;
   } else if (/lokats|lokac|точк|локац/.test(label)) {
-    const locs = rows.filter((p) => p[0] && p[1]).map((p) => ({
-      name: p[0], city: p[1], aliases: (p[2] ?? "").split(",").map((a) => a.trim()).filter(Boolean),
-    }));
-    pending = { kind: "locations", rows: locs };
-    preview = `Знайшов ${locs.length} точок. Ті, що вже є, оновлю.\n\n${locs.slice(0, 8).map((l) => `• ${esc(l.name)}${l.aliases.length ? ` (${esc(l.aliases.join(", "))})` : ""}`).join("\n")}${locs.length > 8 ? `\n… і ще ${locs.length - 8}` : ""}`;
+    // The locations table belongs to the «Відгуки» bot on the same server; this bot only reads it.
+    await send(chat, "Точки я беру з бота «Відгуки», вони в нас спільні. Міняти їх треба там, тому цей файл не зберігаю.");
+    return;
   } else {
     const mem = rows.filter((p) => p.length >= 2 && p[0] && p.slice(1).join(" | "))
       .map((p) => ({ topic: p[0].slice(0, 120), fact: p.slice(1).join(" | ") }));
     pending = { kind: "memory", rows: mem };
     preview = `Знайшов ${mem.length} записів для памʼяті. Теми, що вже є, оновлю.\n\n${mem.slice(0, 8).map((r) => `• <b>${esc(r.topic)}</b>: ${esc(r.fact.slice(0, 120))}`).join("\n")}${mem.length > 8 ? `\n… і ще ${mem.length - 8}` : ""}`;
   }
-  if ((pending.kind === "memory" || pending.kind === "locations") && !pending.rows.length) {
-    await send(chat, "У файлі немає рядків з «|». Для памʼяті: «тема | факт», для точок: «назва | місто | інші назви».");
+  if (pending.kind === "memory" && !pending.rows.length) {
+    await send(chat, "У файлі немає рядків з «|». Для памʼяті пиши так: «тема | факт».");
     return;
   }
   await kvSet(`import:${me.tg_id}`, pending);
@@ -309,9 +306,6 @@ async function onCallback(cb: any) {
       } else if (p.kind === "skill") {
         await kvSet(`skill:${p.name}`, p.text);
         await edit(`✓ Скіл «${esc(p.name)}» збережено. Діє з наступного повідомлення.`);
-      } else if (p.kind === "locations") {
-        await db.from("locations").upsert(p.rows.map((r) => ({ ...r, active: true })), { onConflict: "name" });
-        await edit(`✓ Зберіг ${p.rows.length} точок.`);
       } else {
         await db.from("as_memory").upsert(p.rows.map((r) => ({ ...r, updated_at: now })));
         await edit(`✓ Зберіг у памʼять ${p.rows.length} записів.`);

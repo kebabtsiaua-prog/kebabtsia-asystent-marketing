@@ -12,6 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          ref="__PROJECT_REF__"
+          ref="obpmsgxanigythxkvrmh"
           [[ "$ref" == __* ]] && { echo "Сервер ще не налаштований"; exit 0; }
           curl -fsS "https://$ref.supabase.co/functions/v1/asystent?tick=1"

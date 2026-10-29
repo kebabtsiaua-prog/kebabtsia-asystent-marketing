@@ -1,6 +1,7 @@
 # Deploys the server to Supabase on every push that touches supabase/: database, then functions,
-# then points the Telegram bot at the new function. Skips itself until PROJECT_REF and two repository secrets are set:
-# SUPABASE_ACCESS_TOKEN and SUPABASE_DB_PASSWORD (README → «Секрети»).
+# then points the Telegram bot at the new function. Skips itself until the SUPABASE_ACCESS_TOKEN secret is set.
+# The bot shares the «Відгуки» Supabase project, so it never runs `db push` (that would clash with the other repo's
+# migration history) and deploys only its own two functions by name. Its SQL is idempotent and runs on every deploy.
 name: Deploy server
 
 on:
@@ -12,20 +13,19 @@ on:
 concurrency: deploy
 
 env:
-  PROJECT_REF: "__PROJECT_REF__"
+  PROJECT_REF: "obpmsgxanigythxkvrmh"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
       - name: Ready?
         id: check
         run: |
-          if [[ "$PROJECT_REF" == __* || -z "$SUPABASE_ACCESS_TOKEN" || -z "$SUPABASE_DB_PASSWORD" ]]; then
-            echo "::notice::Сервер ще не налаштований (адреса проєкту або секрети GitHub). Пропускаю."
+          if [[ "$PROJECT_REF" == __* || -z "$SUPABASE_ACCESS_TOKEN" ]]; then
+            echo "::notice::Сервер ще не налаштований (немає секрету SUPABASE_ACCESS_TOKEN). Пропускаю."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
@@ -36,18 +36,21 @@ jobs:
         if: steps.check.outputs.ready == 'true'
         with:
           version: 2.120.0
-      - name: Link project
-        if: steps.check.outputs.ready == 'true'
-        run: supabase link --project-ref "$PROJECT_REF"
       - name: Database changes
         if: steps.check.outputs.ready == 'true'
         run: |
-          # The every-minute job calls this project's own bot function.
-          sed -i "s/__PROJECT_REF__/$PROJECT_REF/g" supabase/migrations/*.sql
-          supabase db push --include-all
+          for f in supabase/migrations/*.sql; do
+            # The every-minute job calls this project's own bot function.
+            sql=$(sed "s/__PROJECT_REF__/$PROJECT_REF/g" "$f")
+            jq -n --arg q "$sql" '{query: $q}' | curl -fsS -X POST \
+              "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "content-type: application/json" \
+              --data @- > /dev/null
+            echo "applied $f"
+          done
       - name: Functions
         if: steps.check.outputs.ready == 'true'
-        run: supabase functions deploy --project-ref "$PROJECT_REF" --no-verify-jwt
+        run: supabase functions deploy asystent asystent-api --project-ref "$PROJECT_REF" --no-verify-jwt
       - name: Connect the Telegram bot
         if: steps.check.outputs.ready == 'true'
         run: |
