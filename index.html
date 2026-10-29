@@ -21,8 +21,11 @@
   --ok:#6fd27a; --bad:#ff7b6b; --sent:#ffb347; color-scheme:dark}}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg2);color:var(--ink);font:15px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif}
-.app{max-width:640px;margin:0 auto;padding:12px max(12px,env(safe-area-inset-right)) 32px max(12px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:12px}
-header{display:flex;flex-direction:column;gap:6px;padding:4px 4px 0}
+/* In fullscreen Telegram draws its own buttons over the top of the page; it reports their height in --tg-*-safe-area-inset-top. */
+.app{max-width:640px;margin:0 auto;padding:calc(12px + var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right)) 32px max(12px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:12px}
+header{display:grid;grid-template-columns:1fr auto;align-items:start;gap:6px 12px;padding:4px 4px 0}
+header .sub{grid-column:1}
+.close{grid-column:2;grid-row:1/span 2;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:inherit;font-weight:600;font-size:14px;padding:8px 12px;border-radius:10px;cursor:pointer}
 h1{font-size:20px;margin:0}
 .sub{color:var(--muted);font-size:13px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -69,6 +72,7 @@ textarea{min-height:64px;resize:vertical}
   <header>
     <h1 id="hello">Привіт</h1>
     <div class="sub" id="sub">Завантажую…</div>
+    <button class="close" id="close" type="button" hidden>✕ Закрити</button>
   </header>
   <div id="demo" class="demo" hidden>Це приклад з вигаданими даними: апку відкрито не з Телеграма.</div>
   <div id="err" class="err" hidden></div>
@@ -131,7 +135,18 @@ textarea{min-height:64px;resize:vertical}
 <script>
 var API = "https://obpmsgxanigythxkvrmh.supabase.co/functions/v1/asystent-api";
 var TG = window.Telegram && Telegram.WebApp && Telegram.WebApp.initData ? Telegram.WebApp : null;
-if (TG) { TG.ready(); TG.expand(); }
+// On a computer the app opens over the whole screen. Telegram's own ✕ in fullscreen first leaves fullscreen,
+// so the page has its own «Закрити» that shuts the app in one press.
+var DESKTOP = TG && ["tdesktop", "macos", "weba", "webk", "web"].indexOf(TG.platform) >= 0;
+if (TG) {
+  TG.ready();
+  TG.expand();
+  if (DESKTOP && TG.isVersionAtLeast && TG.isVersionAtLeast("8.0") && TG.requestFullscreen) {
+    try { TG.requestFullscreen(); } catch (e) { /* older client: stays a normal window */ }
+  }
+  document.getElementById("close").hidden = false;
+  document.getElementById("close").onclick = function () { TG.close(); };
+}
 var DEMO = !TG;
 var state = null;
 var $ = function (id) { return document.getElementById(id); };

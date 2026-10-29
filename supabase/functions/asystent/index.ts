@@ -6,6 +6,7 @@ import { openReminders, type Reminder, reminderLine, scheduleNext } from "../_sh
 import { send, tg, tgFile, token, webhookSecret } from "../_shared/telegram.ts";
 import { FALLBACK_PROMPT } from "./prompt.ts";
 import { DAYS, fmt, fromKyiv, kyiv, kyivDay, parseWhen, two } from "../_shared/time.ts";
+import { vidgukySummary } from "../_shared/vidguky.ts";
 
 const HOUR = 3600_000;
 // Not an env secret: the «Відгуки» bot on the same server already has its own APP_URL, and secrets are shared there.
@@ -58,6 +59,9 @@ async function system(tgId: number) {
   const missed = (closed ?? []).filter((r) => r.status === "missed").length;
   const { data: missedRows } = await db.from("as_reminders").select("id,text,due_at").eq("tg_id", tgId).eq("status", "missed")
     .gte("closed_at", new Date(now.getTime() - 3 * 24 * HOUR).toISOString()).order("due_at");
+  const { data: tasksRow } = await db.from("as_kv").select("value,updated_at").eq("key", "tasks").maybeSingle();
+  const tasks = (tasksRow?.value as string | undefined) ?? "";
+  const tasksAt = tasksRow ? `оновлено ${fmt(new Date(tasksRow.updated_at))}` : "немає";
   const missedLately = (missedRows ?? []) as Pick<Reminder, "id" | "text" | "due_at">[];
   const data = [
     `Зараз у Києві: ${DAYS[p.wd]}, ${two(p.d)}.${two(p.m)}.${p.y} ${two(p.h)}:${two(p.mi)}.`,
@@ -65,6 +69,12 @@ async function system(tgId: number) {
     ...open.map((r) => `- [${r.id}] ${fmt(new Date(r.due_at))} ${r.text}${r.repeat ? ` (${r.repeat})` : ""}${r.status === "sent" ? " — надіслано, чекає «Зроблено»" : ""}`),
     `Пропущені за 3 дні: ${missedLately.map((r) => `[${r.id}] ${fmt(new Date(r.due_at))} ${r.text}`).join("; ") || "немає"}.`,
     `Цього місяця (з ${month}, бот): зроблено ${done}, пропущено ${missed}.`,
+    "",
+    `Задачі й проєкти (список з проєкту Claude, ${tasksAt}):`,
+    tasks || "(ще не надіслані)",
+    "",
+    "Бот «Відгуки» (та сама база, лише читаю; змінювати там нічого не можу):",
+    await vidgukySummary(locs),
   ].join("\n");
   // The prompt, locations and memory change rarely and are cached; the data block (time, reminders) goes after them.
   const prompt = (await kvGet<string>("prompt")) ?? FALLBACK_PROMPT;
@@ -180,7 +190,7 @@ async function converse(chat: number, tgId: number, content: Content[], logText:
 // ---------- Messages ----------
 
 const HELP = "Пиши мені звичайними словами: «нагадай завтра о 18:00 відправити пуш групі 211», «що в мене на четвер?», «запамʼятай: …».\n\n" +
-  "Кнопка «Апка» внизу: план, нагадування і памʼять на одному екрані.\n/plan — усі нагадування\n/pamyat — що я памʼятаю\n\nНалаштування надсилай .txt файлами: промт, памʼять (<code>тема | факт</code>) і скіли (у назві файлу слово skill або скіл).";
+  "Кнопка «Апка» внизу: план, нагадування і памʼять на одному екрані.\n/plan — усі нагадування\n/pamyat — що я памʼятаю\n\nНалаштування надсилай .txt файлами: промт, список задач (у назві zadachi), памʼять (<code>тема | факт</code>) і скіли (у назві файлу слово skill або скіл).";
 
 // deno-lint-ignore no-explicit-any
 async function onMessage(msg: any) {
@@ -229,16 +239,17 @@ async function onMessage(msg: any) {
 }
 
 // A .txt file becomes, after «Так»: the system prompt (name or caption says promt/промт), a skill (skill/скіл),
-// or memory (anything else: «тема | факт»). Business data lives here, not in the repository.
+// the project's task list (zadachi/задачі, replaced whole), or memory (anything else: «тема | факт»). Business data lives here, not in the repository.
 type Pending =
   | { kind: "prompt"; text: string }
   | { kind: "skill"; name: string; text: string }
+  | { kind: "tasks"; text: string }
   | { kind: "memory"; rows: { topic: string; fact: string }[] };
 
 // deno-lint-ignore no-explicit-any
 async function onDocument(chat: number, me: Person, doc: any, caption: string) {
   if (!/\.(txt|md)$/i.test(doc.file_name ?? "")) {
-    await send(chat, "Поки читаю тільки .txt файли: промт, памʼять або скіл.");
+    await send(chat, "Поки читаю тільки .txt файли: промт, задачі, памʼять або скіл.");
     return;
   }
   const { bytes } = await tgFile(doc.file_id);
@@ -254,6 +265,9 @@ async function onDocument(chat: number, me: Person, doc: any, caption: string) {
     const name = String(doc.file_name).replace(/\.(txt|md)$/i, "").replace(/^(skill|скіл)[-_ ]*/i, "") || "скіл";
     pending = { kind: "skill", name, text };
     preview = `Новий скіл «${esc(name)}»: ${text.length} символів. Якщо скіл з такою назвою вже є, заміню.\n\n<i>${esc(text.slice(0, 300))}…</i>`;
+  } else if (/zadach|задач/.test(label)) {
+    pending = { kind: "tasks", text };
+    preview = `Список задач і проєктів: ${text.split("\n").filter((l) => /^\|\s*\d+/.test(l)).length || "?"} задач. Старий список заміню цим.`;
   } else if (/lokats|lokac|точк|локац/.test(label)) {
     // The locations table belongs to the «Відгуки» bot on the same server; this bot only reads it.
     await send(chat, "Точки я беру з бота «Відгуки», вони в нас спільні. Міняти їх треба там, тому цей файл не зберігаю.");
@@ -304,6 +318,9 @@ async function onCallback(cb: any) {
       if (p.kind === "prompt") {
         await kvSet("prompt", p.text);
         await edit("✓ Новий промт збережено. Діє з наступного повідомлення.");
+      } else if (p.kind === "tasks") {
+        await kvSet("tasks", p.text);
+        await edit("✓ Список задач збережено. Тепер я знаю, над чим ми працюємо.");
       } else if (p.kind === "skill") {
         await kvSet(`skill:${p.name}`, p.text);
         await edit(`✓ Скіл «${esc(p.name)}» збережено. Діє з наступного повідомлення.`);
