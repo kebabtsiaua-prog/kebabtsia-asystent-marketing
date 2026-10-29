@@ -1,9 +1,10 @@
 // Mini app backend. Every request: POST { initData, action, ...args }; the Telegram user is taken from initData,
 // and only people in as_people (the owner) get in.
-import { db } from "../_shared/common.ts";
+import { activeLocations, db } from "../_shared/common.ts";
 import { openReminders, type Reminder, scheduleNext } from "../_shared/reminders.ts";
 import { telegramUser, tg } from "../_shared/telegram.ts";
 import { fromKyiv, kyiv, parseWhen } from "../_shared/time.ts";
+import { vidgukyData } from "../_shared/vidguky.ts";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -31,6 +32,7 @@ async function overview(tgId: number) {
   const { data: month } = await db.from("as_reminders").select("status").eq("tg_id", tgId).gte("closed_at", monthStart);
   const { data: memory } = await db.from("as_memory").select("topic,fact,updated_at").order("topic");
   const { data: me } = await db.from("as_people").select("name").eq("tg_id", tgId).maybeSingle();
+  const { data: tasks } = await db.from("as_kv").select("value,updated_at").eq("key", "tasks").maybeSingle();
   return {
     name: me?.name ?? "",
     now: now.toISOString(),
@@ -41,6 +43,7 @@ async function overview(tgId: number) {
       missed: (month ?? []).filter((r) => r.status === "missed").length,
     },
     memory: memory ?? [],
+    tasks: tasks ? { text: tasks.value as string, updated_at: tasks.updated_at } : null,
   };
 }
 
@@ -60,6 +63,10 @@ async function handle(tgId: number, b: any) {
   switch (b.action) {
     case "overview":
       return await overview(tgId);
+
+    // The «Огляд» tab: «Відгуки» by location. Loaded separately, so the plan opens fast.
+    case "vidguky":
+      return await vidgukyData(await activeLocations());
 
     case "add": {
       const text = String(b.text ?? "").trim();

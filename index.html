@@ -33,8 +33,8 @@ h1{font-size:20px;margin:0}
 .stat b{font-size:22px;font-variant-numeric:tabular-nums}
 .stat span{font-size:12px;color:var(--muted)}
 .stat.ok b{color:var(--ok)} .stat.bad b{color:var(--bad)}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--bg);border-radius:12px;padding:3px;gap:3px;position:sticky;top:0;z-index:2}
-.tabs button{border:0;background:transparent;color:var(--muted);font-family:inherit;font-weight:600;font-size:14px;padding:9px 4px;border-radius:9px;cursor:pointer}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg);border-radius:12px;padding:3px;gap:3px;position:sticky;top:0;z-index:2}
+.tabs button{border:0;background:transparent;color:var(--muted);font-family:inherit;font-weight:600;font-size:13px;padding:9px 2px;min-width:0;overflow:hidden;text-overflow:ellipsis;border-radius:9px;cursor:pointer}
 .tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
 .card{background:var(--bg);border-radius:14px;padding:4px 0;display:flex;flex-direction:column}
 .group{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:12px 14px 4px}
@@ -64,6 +64,24 @@ textarea{min-height:64px;resize:vertical}
 .mem:first-child{border-top:0}
 .mem b{font-size:14px}
 .demo{background:color-mix(in srgb,var(--sent) 15%,transparent);color:var(--ink);border-radius:10px;padding:8px 12px;font-size:13px}
+.task{padding:10px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.group+.task{border-top:0}
+.task b{font-size:14px}
+.task .num{color:var(--muted);font-weight:500;margin-right:4px;font-variant-numeric:tabular-nums}
+details.done summary{cursor:pointer;padding:12px 14px;color:var(--muted);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.kpi{background:var(--bg);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi.bad b{color:var(--bad)}
+.point{padding:10px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.point:first-child{border-top:0}
+.point .head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.point .head b{font-size:14px;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;padding:2px 8px;border-radius:9px;background:var(--bg2);font-variant-numeric:tabular-nums}
+.chip.bad{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
+.chip.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
 .err{background:color-mix(in srgb,var(--bad) 15%,transparent);border-radius:10px;padding:8px 12px;font-size:13px}
 </style>
 </head>
@@ -83,6 +101,8 @@ textarea{min-height:64px;resize:vertical}
   </div>
   <div class="tabs" role="tablist">
     <button role="tab" id="tab-plan" aria-selected="true" data-tab="plan">План</button>
+    <button role="tab" id="tab-tasks" aria-selected="false" data-tab="tasks">Задачі</button>
+    <button role="tab" id="tab-vidguky" aria-selected="false" data-tab="vidguky">Відгуки</button>
     <button role="tab" id="tab-memory" aria-selected="false" data-tab="memory">Памʼять</button>
     <button role="tab" id="tab-history" aria-selected="false" data-tab="history">Історія</button>
   </div>
@@ -112,6 +132,16 @@ textarea{min-height:64px;resize:vertical}
         <button class="btn main" type="submit">Поставити нагадування</button>
       </form>
     </div>
+  </section>
+
+  <section id="tasks" hidden>
+    <div class="card" id="taskList"></div>
+  </section>
+
+  <section id="vidguky" hidden>
+    <div class="kpis" id="vKpis"></div>
+    <div class="card" id="vOpen" style="margin-top:12px"></div>
+    <div class="card" id="vPoints" style="margin-top:12px"><div class="empty">Завантажую…</div></div>
   </section>
 
   <section id="memory" hidden>
@@ -177,6 +207,7 @@ function demoData() {
       { id: 5, text: "Пуш з купоном для тих, хто давно не був", due_at: new Date(now - 74 * h).toISOString(), status: "missed", closed_at: new Date(now - 70 * h).toISOString() }
     ],
     month: { done: 7, missed: 3 },
+    tasks: { updated_at: new Date().toISOString(), text: "| # | Задача | Статус | Що зроблено | Наступний крок |\n|---|---|---|---|---|\n| 1 | Приклад задачі в роботі | 🟢 | Що вже зроблено | Що далі |\n| 2 | Задача, що чекає твого рішення | 🟡 | Чернетка готова | Твоя відповідь |\n| 3 | Закрита задача | ✅ | Усе зроблено | — |" },
     memory: [
       { topic: "Приклад теми", fact: "Тут буде факт із твоєї памʼяті." },
       { topic: "Ще одна тема", fact: "Памʼять можна змінити або видалити прямо тут." }
@@ -184,8 +215,21 @@ function demoData() {
   };
 }
 
+function demoVidguky() {
+  return {
+    complaints: { week: 4, month: 15, open: 2, openList: [{ day: dayKey(new Date()), point: "Точка А", channel: "google", text: "Приклад скарги без рішення" }] },
+    app: { week: 120, avgWeek: 4.7, lowWeek: 6, avgMonth: 4.6 },
+    google: { avg: 4.6 },
+    lowReviews: [{ point: "Точка Б", rating: 2, text: "Приклад низького відгуку з Google" }],
+    points: [
+      { name: "Точка А", city: "Місто", admins: ["Адміністратор 1"], complaintsWeek: 3, complaintsOpen: 2, appWeek: 60, appAvgWeek: 4.5, google: 4.4, googleChange: -0.1 },
+      { name: "Точка Б", city: "Місто", admins: [], complaintsWeek: 1, complaintsOpen: 0, appWeek: 60, appAvgWeek: 4.9, google: 4.8, googleChange: 0 }
+    ]
+  };
+}
+
 function call(action, args) {
-  if (DEMO) return Promise.resolve(state || demoData());
+  if (DEMO) return Promise.resolve(action === "vidguky" ? demoVidguky() : state || demoData());
   var body = Object.assign({ action: action, initData: TG.initData }, args || {});
   return fetch(API, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
     .then(function (r) { return r.json(); })
@@ -226,16 +270,74 @@ function render(s) {
       (r.status === "missed" ? '<div class="acts"><button data-act="done" data-id="' + r.id + '">Насправді зроблено</button></div>' : "") + "</div></div>";
   }).join("") : '<div class="empty">За два тижні ще нічого не закрито.</div>';
 
+  renderTasks(s.tasks);
+
   $("memList").innerHTML = s.memory.length ? s.memory.map(function (m, i) {
     return '<div class="mem"><b>' + esc(m.topic) + '</b><div class="txt">' + esc(m.fact) + '</div><div class="acts"><button data-mem="edit" data-i="' + i + '">Змінити</button><button data-mem="del" data-i="' + i + '">Видалити</button></div></div>';
   }).join("") : '<div class="empty">Памʼять порожня. Надішли боту .txt файл або додай запис нижче.</div>';
+}
+
+// The task list is the project's Markdown table: | # | Задача | Статус | Що зроблено | Наступний крок |.
+var STATUS = [["🟢", "В роботі"], ["🟡", "Чекає рішення"], ["⏸", "На паузі"], ["✅", "Готово"]];
+function md(s) { return esc(s).replace(/`([^`]+)`/g, "$1").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>"); }
+function renderTasks(t) {
+  if (!t || !t.text) { $("taskList").innerHTML = '<div class="empty">Список задач ще не підтягнувся з проєкту.</div>'; return; }
+  var rows = t.text.split("\n").filter(function (l) { return /^\|\s*\d+\s*\|/.test(l); }).map(function (l) {
+    var c = l.split("|").slice(1, -1).map(function (x) { return x.trim(); });
+    return { n: c[0], name: c[1] || "", status: c[2] || "", done: c[3] || "", next: c[4] || "" };
+  });
+  if (!rows.length) { $("taskList").innerHTML = '<div class="task"><div class="txt">' + md(t.text).replace(/\n/g, "<br>") + "</div></div>"; return; }
+  var html = "";
+  STATUS.forEach(function (st) {
+    var list = rows.filter(function (r) { return r.status.indexOf(st[0]) === 0; });
+    if (!list.length) return;
+    var items = list.map(function (r) {
+      return '<div class="task"><b><span class="num">' + esc(r.n) + "</span>" + md(r.name) + "</b>" +
+        (r.next && r.next !== "—" ? '<div class="txt"><span class="meta">Далі:</span> ' + md(r.next) + "</div>" : "") +
+        (r.done ? '<div class="meta">' + md(r.done) + "</div>" : "") + "</div>";
+    }).join("");
+    html += st[0] === "✅" ? '<details class="done"><summary>Готово: ' + list.length + "</summary>" + items + "</details>" : '<div class="group">' + st[1] + " · " + list.length + "</div>" + items;
+  });
+  $("taskList").innerHTML = html + '<div class="empty">Оновлено ' + new Date(t.updated_at).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Kyiv" }) + "</div>";
+}
+
+function one(x) { return x == null ? "—" : Number(x).toFixed(1); }
+function renderVidguky(v) {
+  var c = v.complaints, a = v.app, g = v.google;
+  $("vKpis").innerHTML =
+    '<div class="kpi"><b>' + (c ? c.week : "—") + "</b><span>скарг за 7 днів</span></div>" +
+    '<div class="kpi' + (c && c.open ? " bad" : "") + '"><b>' + (c ? c.open : "—") + "</b><span>скарг без рішення</span></div>" +
+    '<div class="kpi"><b>' + (a ? one(a.avgWeek) : "—") + "</b><span>оцінка в апці за 7 днів" + (a ? " · " + a.week + " оцінок" : "") + "</span></div>" +
+    '<div class="kpi"><b>' + (g ? one(g.avg) : "—") + "</b><span>Google, середнє по мережі</span></div>";
+  var open = (c ? c.openList : []).map(function (x) {
+    return '<div class="task"><b>' + esc(x.point) + ' <span class="meta">' + esc(x.day) + " · " + esc(x.channel) + '</span></b><div class="txt">' + esc(x.text) + "</div></div>";
+  }).concat(v.lowReviews.map(function (x) {
+    return '<div class="task"><b>' + esc(x.point) + ' <span class="meta">Google ' + x.rating + '★</span></b><div class="txt">' + esc(x.text) + "</div></div>";
+  }));
+  $("vOpen").hidden = !open.length;
+  $("vOpen").innerHTML = '<div class="group">Потребує уваги</div>' + open.join("");
+  $("vPoints").innerHTML = '<div class="group">Точки · ' + v.points.length + "</div>" + v.points.map(function (p) {
+    var ch = p.googleChange ? (p.googleChange > 0 ? " +" : " ") + one(p.googleChange) : "";
+    return '<div class="point"><div class="head"><b>' + esc(p.name) + '</b><span class="meta">' + esc(p.city) + "</span></div>" +
+      '<div class="meta">' + (p.admins.length ? "Відповідає: " + esc(p.admins.join(", ")) : "Адміністратора немає") + "</div>" +
+      '<div class="chips"><span class="chip' + (p.complaintsOpen ? " bad" : "") + '">скарг за 7 дн: ' + p.complaintsWeek + (p.complaintsOpen ? " · без рішення " + p.complaintsOpen : "") + "</span>" +
+      '<span class="chip' + (p.googleChange < 0 ? " bad" : p.googleChange > 0 ? " ok" : "") + '">Google ' + one(p.google) + ch + "</span>" +
+      '<span class="chip">апка ' + one(p.appAvgWeek) + (p.appWeek ? " · " + p.appWeek : "") + "</span></div></div>";
+  }).join("");
+}
+var vLoaded = 0;
+function loadVidguky() {
+  if (Date.now() - vLoaded < 60000) return;
+  vLoaded = Date.now();
+  call("vidguky").then(renderVidguky).catch(function (e) { vLoaded = 0; $("vPoints").innerHTML = '<div class="empty">' + esc(e.message) + "</div>"; });
 }
 
 document.addEventListener("click", function (e) {
   var b = e.target.closest("button");
   if (!b) return;
   if (b.dataset.tab) {
-    ["plan", "memory", "history"].forEach(function (t) { $(t).hidden = t !== b.dataset.tab; $("tab-" + t).setAttribute("aria-selected", String(t === b.dataset.tab)); });
+    ["plan", "tasks", "vidguky", "memory", "history"].forEach(function (t) { $(t).hidden = t !== b.dataset.tab; $("tab-" + t).setAttribute("aria-selected", String(t === b.dataset.tab)); });
+    if (b.dataset.tab === "vidguky") loadVidguky();
     return;
   }
   if (b.dataset.act) { run(b.dataset.act, { id: Number(b.dataset.id), to: b.dataset.to }); return; }
