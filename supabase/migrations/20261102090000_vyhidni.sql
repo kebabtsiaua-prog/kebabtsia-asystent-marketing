@@ -1,5 +1,5 @@
 -- Files the bot sends on its own at a set time, such as the weekly PDF report Claude prepares on Sunday for Monday morning.
--- The file is kept as base64 text and cleared once sent.
+-- The file is kept as base64 text, so the app can send an old report again.
 create table if not exists as_outbox (
   id         bigint generated always as identity primary key,
   tg_id      bigint not null,

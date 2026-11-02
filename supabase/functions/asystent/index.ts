@@ -6,6 +6,7 @@ import { openReminders, type Reminder, reminderLine, scheduleNext } from "../_sh
 import { send, sendDocument, tg, tgFile, token, webhookSecret } from "../_shared/telegram.ts";
 import { FALLBACK_PROMPT } from "./prompt.ts";
 import { DAYS, fmt, fromKyiv, kyiv, kyivDay, parseWhen, two } from "../_shared/time.ts";
+import { type Trello, trelloSummary } from "../_shared/trello.ts";
 import { vidgukySummary } from "../_shared/vidguky.ts";
 
 const HOUR = 3600_000;
@@ -62,6 +63,7 @@ async function system(tgId: number) {
   const { data: tasksRow } = await db.from("as_kv").select("value,updated_at").eq("key", "tasks").maybeSingle();
   const tasks = (tasksRow?.value as string | undefined) ?? "";
   const tasksAt = tasksRow ? `оновлено ${fmt(new Date(tasksRow.updated_at))}` : "немає";
+  const { data: trelloRow } = await db.from("as_kv").select("value,updated_at").eq("key", "trello").maybeSingle();
   const missedLately = (missedRows ?? []) as Pick<Reminder, "id" | "text" | "due_at">[];
   const data = [
     `Зараз у Києві: ${DAYS[p.wd]}, ${two(p.d)}.${two(p.m)}.${p.y} ${two(p.h)}:${two(p.mi)}.`,
@@ -72,6 +74,8 @@ async function system(tgId: number) {
     "",
     `Задачі й проєкти (список з проєкту Claude, ${tasksAt}):`,
     tasks || "(ще не надіслані)",
+    "",
+    trelloSummary((trelloRow?.value as Trello | undefined) ?? null, trelloRow ? `оновлено ${fmt(new Date(trelloRow.updated_at))}` : ""),
     "",
     "Бот «Відгуки» (та сама база, лише читаю; змінювати там нічого не можу):",
     await vidgukySummary(locs),
@@ -413,7 +417,7 @@ async function outbox(now: number): Promise<number> {
       await db.from("as_outbox").update({ send_after: new Date(now + HOUR).toISOString() }).eq("id", f.id); // try again in an hour
       continue;
     }
-    await db.from("as_outbox").update({ sent_at: new Date(now).toISOString(), file_b64: null }).eq("id", f.id);
+    await db.from("as_outbox").update({ sent_at: new Date(now).toISOString() }).eq("id", f.id);
     n++;
   }
   return n;

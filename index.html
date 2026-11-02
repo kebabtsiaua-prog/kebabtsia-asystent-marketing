@@ -6,161 +6,195 @@
 <title>Кебабця Маркетинг Асистент</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-/* Telegram gives its theme colours as --tg-theme-*; the fallbacks are for a browser preview. */
+/* Background and text follow the Telegram theme; the accent is Kebabtsia's teal. Status colours work in both themes. */
 :root{
-  --bg:var(--tg-theme-bg-color,#ffffff); --bg2:var(--tg-theme-secondary-bg-color,#f2f1ee);
-  --ink:var(--tg-theme-text-color,#1f1d1a); --muted:var(--tg-theme-hint-color,#7b766d);
-  --accent:var(--tg-theme-button-color,#c8411f); --accent-ink:var(--tg-theme-button-text-color,#ffffff);
-  --line:color-mix(in srgb,var(--muted) 25%,transparent);
-  --ok:#2f8f3a; --bad:#c0392b; --sent:#d68400;
+  --bg:var(--tg-theme-secondary-bg-color,#eef2f1); --card:var(--tg-theme-bg-color,#ffffff);
+  --ink:var(--tg-theme-text-color,#172524); --muted:var(--tg-theme-hint-color,#6c7a78);
+  --line:color-mix(in srgb,var(--muted) 22%,transparent); --soft:color-mix(in srgb,var(--muted) 12%,transparent);
+  --accent:#0f7c80; --accent-ink:#ffffff; --accent-soft:color-mix(in srgb,#0f7c80 14%,transparent);
+  --ok:#23864a; --warn:#b26b00; --bad:#c43b2f;
+  --nav:#172524; --nav-ink:#ffffff;
+  --r-card:24px; --r-tile:20px; --r-in:14px;
 }
 @media (prefers-color-scheme: dark){:root{
-  --bg:var(--tg-theme-bg-color,#1b1a18); --bg2:var(--tg-theme-secondary-bg-color,#121110);
-  --ink:var(--tg-theme-text-color,#efe9df); --muted:var(--tg-theme-hint-color,#9b958a);
-  --accent:var(--tg-theme-button-color,#ff7a52); --accent-ink:var(--tg-theme-button-text-color,#1a0f0a);
-  --ok:#6fd27a; --bad:#ff7b6b; --sent:#ffb347; color-scheme:dark}}
+  --bg:var(--tg-theme-secondary-bg-color,#0f1515); --card:var(--tg-theme-bg-color,#1a2222);
+  --ink:var(--tg-theme-text-color,#e8efee); --muted:var(--tg-theme-hint-color,#8d9b99);
+  --accent:#4db5bb; --accent-ink:#0b1c1d; --accent-soft:color-mix(in srgb,#4db5bb 18%,transparent);
+  --ok:#5fd08a; --warn:#f2b54a; --bad:#ff7e70;
+  --nav:#253131; --nav-ink:#e8efee; color-scheme:dark}}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg2);color:var(--ink);font:15px/1.45 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.42 -apple-system,system-ui,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
 /* In fullscreen Telegram draws its own buttons over the top of the page; it reports their height in --tg-*-safe-area-inset-top. */
-.app{max-width:640px;margin:0 auto;padding:calc(12px + var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right)) 32px max(12px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:12px}
-header{display:grid;grid-template-columns:1fr auto;align-items:start;gap:6px 12px;padding:4px 4px 0}
-header .sub{grid-column:1}
-.close{grid-column:2;grid-row:1/span 2;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:inherit;font-weight:600;font-size:14px;padding:8px 12px;border-radius:10px;cursor:pointer}
-h1{font-size:20px;margin:0}
-.sub{color:var(--muted);font-size:13px}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.stat{background:var(--bg);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
-.stat b{font-size:22px;font-variant-numeric:tabular-nums}
-.stat span{font-size:12px;color:var(--muted)}
-.stat.ok b{color:var(--ok)} .stat.bad b{color:var(--bad)}
-.tabs{display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg);border-radius:12px;padding:3px;gap:3px;position:sticky;top:0;z-index:2}
-.tabs button{border:0;background:transparent;color:var(--muted);font-family:inherit;font-weight:600;font-size:13px;padding:9px 2px;min-width:0;overflow:hidden;text-overflow:ellipsis;border-radius:9px;cursor:pointer}
-.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
-.card{background:var(--bg);border-radius:14px;padding:4px 0;display:flex;flex-direction:column}
-.group{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:12px 14px 4px}
-.item{display:grid;grid-template-columns:52px 1fr;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
-.group+.item{border-top:0}
-.t{font-variant-numeric:tabular-nums;font-weight:600}
-.t small{display:block;font-weight:400;font-size:11px;color:var(--muted)}
-.body{display:flex;flex-direction:column;gap:6px;min-width:0}
-.txt{word-wrap:break-word}
-.meta{font-size:12px;color:var(--muted)}
-.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:9px;margin-right:6px}
-.pill.sent{background:color-mix(in srgb,var(--sent) 18%,transparent);color:var(--sent)}
-.pill.done{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
-.pill.missed{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
-.acts{display:flex;flex-wrap:wrap;gap:6px}
-.acts button,.btn{border:1px solid var(--line);background:var(--bg2);color:var(--ink);font-family:inherit;font-weight:500;font-size:13px;padding:6px 10px;border-radius:9px;cursor:pointer}
-.acts .do{background:var(--accent);color:var(--accent-ink);border-color:transparent}
-.btn.main{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600;padding:10px 14px;font-size:15px}
-button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.empty{padding:18px 14px;color:var(--muted)}
-form{display:flex;flex-direction:column;gap:10px;padding:14px}
-label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
-input,select,textarea{font-family:inherit;font-size:15px;color:var(--ink);background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%}
-textarea{min-height:64px;resize:vertical}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.mem{padding:10px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.app{max-width:560px;margin:0 auto;padding:calc(12px + var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right)) calc(112px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:12px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px}
+.hi{min-width:0;display:flex;align-items:center;gap:10px}
+.hi small{display:block;color:var(--muted);font-size:13px}
+.hi b{display:block;font-size:21px;letter-spacing:-.01em;line-height:1.2}
+.hbtns{display:flex;gap:8px;flex:none}
+.round{width:42px;height:42px;border-radius:50%;border:0;background:var(--card);display:grid;place-items:center;flex:none}
+.round svg{width:20px;height:20px}
+.close{border:0;background:var(--card);border-radius:21px;padding:0 14px;height:42px;font-weight:600;font-size:14px;white-space:nowrap}
+.demo{background:color-mix(in srgb,var(--warn) 16%,transparent);border-radius:var(--r-in);padding:8px 12px;font-size:13px}
+.err{background:color-mix(in srgb,var(--bad) 15%,transparent);border-radius:var(--r-in);padding:8px 12px;font-size:13px}
+.card{background:var(--card);border-radius:var(--r-card);padding:16px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.list{display:flex;flex-direction:column;gap:8px}
+h2{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:6px 4px 0;font-weight:700;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+h2 button{border:0;background:none;color:var(--accent);text-transform:none;letter-spacing:0;font-size:13px;font-weight:700;padding:0}
+.empty{text-align:center;color:var(--muted);padding:22px 12px;font-size:14px}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+.note{text-align:center;color:var(--muted);font-size:12px;padding:2px 8px}
+/* Focus */
+.focus{background:var(--accent);color:var(--accent-ink);border-radius:var(--r-card);padding:18px;display:flex;flex-direction:column;gap:10px}
+.focus .ftag{align-self:flex-start;font-size:12px;font-weight:700;background:color-mix(in srgb,var(--accent-ink) 18%,transparent);padding:3px 11px;border-radius:999px}
+.focus .big{font-size:21px;line-height:1.22;font-weight:700;letter-spacing:-.01em;text-wrap:balance;overflow-wrap:anywhere}
+.focus .why{font-size:13px;opacity:.88}
+.focus .row{display:flex;gap:8px;flex-wrap:wrap}
+.focus .row button{border:0;border-radius:999px;padding:11px 18px;font-weight:700;font-size:14px}
+.focus .main{background:var(--accent-ink);color:var(--accent)}
+.focus .ghost{background:color-mix(in srgb,var(--accent-ink) 18%,transparent);color:var(--accent-ink)}
+/* Week */
+.week{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+.ring{position:relative;width:84px;height:84px;flex:none}
+.ring svg{display:block}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:19px;font-variant-numeric:tabular-nums}
+.wk{min-width:0}
+.wk h3{margin:0;font-size:16px}
+.wk p{margin:2px 0 10px;color:var(--muted);font-size:13px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.day{border:0;background:transparent;border-radius:999px;padding:6px 0 7px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--muted);min-width:0}
+.day b{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
+.day i{width:5px;height:5px;border-radius:50%;background:transparent}
+.day.tail i{background:var(--bad)} .day.full i{background:var(--ok)}
+.day.on{background:var(--accent);color:var(--accent-ink)} .day.on b{color:var(--accent-ink)}
+/* KPI */
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--card);border-radius:var(--r-tile);padding:14px;display:flex;flex-direction:column;gap:3px;min-width:0;border:0;text-align:left}
+.kpi .top{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.kpi .num{font-size:28px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.12}
+.kpi .num small{font-size:14px;color:var(--muted);font-weight:600;margin-left:2px}
+.kpi .sub{font-size:12px;color:var(--muted)}
+.kpi.alert .num{color:var(--bad)}
+.delta{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.delta.up{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.delta.down{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+/* Timeline */
+.ti{display:grid;grid-template-columns:46px 14px 1fr;gap:8px;align-items:start;padding:8px 0}
+.ti .t{font-weight:700;font-variant-numeric:tabular-nums;font-size:14px;padding-top:1px}
+.ti .t small{display:block;font-weight:500;font-size:11px;color:var(--muted)}
+.ti .rail{position:relative;align-self:stretch;display:flex;justify-content:center}
+.ti .rail::before{content:"";position:absolute;top:10px;bottom:-18px;width:2px;background:var(--line)}
+.ti:last-child .rail::before{display:none}
+.ti .rail i{position:relative;width:12px;height:12px;border-radius:50%;border:2px solid var(--accent);background:var(--card);margin-top:4px}
+.ti.done .rail i{background:var(--ok);border-color:var(--ok)}
+.ti.late .rail i{border-color:var(--bad)}
+.ti.done .txt{color:var(--muted);text-decoration:line-through}
+.ti .body{min-width:0}
+.ti .txt{overflow-wrap:anywhere}
+.acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.acts .pill{padding:6px 11px;font-size:12.5px}
+.pill{border:1px solid var(--line);background:transparent;border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600;white-space:nowrap}
+.pill.do{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.pill.big{padding:13px;font-size:15px;width:100%}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--soft);color:var(--muted);white-space:nowrap}
+.tag.bad{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
+.tag.warn{background:color-mix(in srgb,var(--warn) 17%,transparent);color:var(--warn)}
+.tag.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.tag.acc{background:var(--accent-soft);color:var(--accent)}
+/* Tabs with counters */
+.seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px;margin:0 -2px}
+.seg::-webkit-scrollbar{display:none}
+.seg button{border:0;background:var(--card);border-radius:999px;padding:9px 15px;font-weight:600;font-size:14px;white-space:nowrap;display:flex;gap:7px;align-items:center;flex:none}
+.seg button span{font-size:12px;background:var(--soft);border-radius:999px;padding:0 7px;min-width:22px;text-align:center;font-variant-numeric:tabular-nums}
+.seg button.on{background:var(--ink);color:var(--card)}
+.seg button.on span{background:var(--accent);color:var(--accent-ink)}
+.task{background:var(--card);border-radius:var(--r-tile);padding:14px;display:grid;grid-template-columns:22px 1fr;gap:12px;align-items:start;border:0;text-align:left;width:100%}
+.task .box{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);margin-top:1px}
+.task.done .box{background:var(--ok);border-color:var(--ok)}
+.task.done .name{color:var(--muted);text-decoration:line-through}
+.task .name{overflow-wrap:anywhere}
+.task .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.task.plain{grid-template-columns:1fr}
+/* Відгуки */
+.point{background:var(--card);border-radius:var(--r-tile);padding:14px;display:flex;flex-direction:column;gap:6px;border:2px solid transparent}
+.point.bad{border-color:var(--bad)}
+.point .head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.point .head b{font-size:15px;min-width:0}
+.point .who{font-size:13px;color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:12px;background:var(--bg);border-radius:999px;padding:3px 10px;font-variant-numeric:tabular-nums}
+.alertrow{padding:10px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:3px}
+.alertrow:first-of-type{border-top:0}
+.alertrow .txt{overflow-wrap:anywhere}
+/* Звіти */
+.bars{display:flex;align-items:flex-end;gap:8px;height:128px;margin-top:14px}
+.bars div{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;font-size:11px;color:var(--muted);min-width:0}
+.bars i{width:100%;border-radius:10px 10px 6px 6px;background:var(--soft);display:block}
+.bars i b{display:block;background:var(--accent);border-radius:inherit;width:100%}
+.bars em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+.bars .today{color:var(--ink);font-weight:700}
+.pdf{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+.pdf:first-child{border-top:0}
+.pdf small{display:block;color:var(--muted);font-size:12px}
+.mem{padding:12px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
 .mem:first-child{border-top:0}
-.mem b{font-size:14px}
-.demo{background:color-mix(in srgb,var(--sent) 15%,transparent);color:var(--ink);border-radius:10px;padding:8px 12px;font-size:13px}
-.task{padding:10px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
-.group+.task{border-top:0}
-.task b{font-size:14px}
-.task .num{color:var(--muted);font-weight:500;margin-right:4px;font-variant-numeric:tabular-nums}
-details.done summary{cursor:pointer;padding:12px 14px;color:var(--muted);font-size:13px}
-.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.kpi{background:var(--bg);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
-.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
-.kpi span{font-size:12px;color:var(--muted)}
-.kpi.bad b{color:var(--bad)}
-.point{padding:10px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
-.point:first-child{border-top:0}
-.point .head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
-.point .head b{font-size:14px;min-width:0}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{font-size:12px;padding:2px 8px;border-radius:9px;background:var(--bg2);font-variant-numeric:tabular-nums}
-.chip.bad{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
-.chip.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
-.err{background:color-mix(in srgb,var(--bad) 15%,transparent);border-radius:10px;padding:8px 12px;font-size:13px}
+.mem .txt{overflow-wrap:anywhere}
+/* Bottom nav: a floating pill; the round «+» in the middle adds a reminder. */
+nav{position:fixed;left:0;right:0;bottom:0;padding:10px max(16px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));display:flex;justify-content:center;pointer-events:none;z-index:5}
+.navbar{pointer-events:auto;background:var(--nav);border-radius:32px;padding:6px;display:grid;grid-template-columns:repeat(5,1fr);align-items:center;gap:2px;width:100%;max-width:528px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+.navbar button{border:0;background:transparent;color:var(--nav-ink);opacity:.62;border-radius:26px;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;min-width:0}
+.navbar button svg{width:22px;height:22px}
+.navbar button.on{opacity:1;background:color-mix(in srgb,var(--nav-ink) 12%,transparent)}
+.navbar .plus{opacity:1}
+.navbar .plus span{width:48px;height:48px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.navbar .plus svg{width:24px;height:24px;display:block}
+/* Sheet + toast */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:8}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:9;display:flex;justify-content:center}
+.sheet>div{background:var(--card);width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:28px 28px 0 0;padding:10px max(16px,env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:12px}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);align-self:center}
+.sheet h3{margin:0;font-size:18px;overflow-wrap:anywhere}
+.sheet .ctx{font-size:13px;color:var(--muted)}
+.sheet .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sheet .row .pill{padding:12px;font-size:14px;white-space:normal}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:var(--r-in);padding:11px;width:100%}
+textarea{min-height:70px;resize:vertical}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(100px + env(safe-area-inset-bottom));z-index:7;background:var(--ink);color:var(--card);border-radius:18px;padding:11px 12px 11px 16px;display:flex;gap:14px;align-items:center;font-size:14px;width:max-content;max-width:calc(100% - 32px)}
+.toast span{overflow-wrap:anywhere}
+.toast button{border:0;background:transparent;color:var(--accent);font-weight:700;flex:none}
+@media (prefers-reduced-motion: no-preference){.sheet>div{animation:up .22s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.4}}}
+@media (min-width:700px){.kpis{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1 id="hello">Привіт</h1>
-    <div class="sub" id="sub">Завантажую…</div>
-    <button class="close" id="close" type="button" hidden>✕ Закрити</button>
+    <div class="hi">
+      <button class="round" id="back" type="button" aria-label="Назад" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div><small id="date"></small><b id="title">Привіт</b></div>
+    </div>
+    <div class="hbtns">
+      <button class="round" type="button" data-sheet="more" aria-label="Ще: памʼять та історія"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+      <button class="close" id="close" type="button" hidden>✕ Закрити</button>
+    </div>
   </header>
   <div id="demo" class="demo" hidden>Це приклад з вигаданими даними: апку відкрито не з Телеграма.</div>
   <div id="err" class="err" hidden></div>
-  <div class="stats">
-    <div class="stat"><b id="sOpen">–</b><span>відкрито</span></div>
-    <div class="stat ok"><b id="sDone">–</b><span>зроблено за місяць</span></div>
-    <div class="stat bad"><b id="sMiss">–</b><span>пропущено за місяць</span></div>
-  </div>
-  <div class="tabs" role="tablist">
-    <button role="tab" id="tab-plan" aria-selected="true" data-tab="plan">План</button>
-    <button role="tab" id="tab-tasks" aria-selected="false" data-tab="tasks">Задачі</button>
-    <button role="tab" id="tab-vidguky" aria-selected="false" data-tab="vidguky">Відгуки</button>
-    <button role="tab" id="tab-memory" aria-selected="false" data-tab="memory">Памʼять</button>
-    <button role="tab" id="tab-history" aria-selected="false" data-tab="history">Історія</button>
-  </div>
-
-  <section id="plan">
-    <div class="card" id="openList"></div>
-    <div class="card" style="margin-top:12px">
-      <form id="addForm">
-        <b>Нове нагадування</b>
-        <label>Про що нагадати<textarea id="aText" placeholder="Відправити пуш акції тижня"></textarea></label>
-        <div class="row">
-          <label>Дата<input type="date" id="aDate"></label>
-          <label>Час<input type="time" id="aTime" value="10:00"></label>
-        </div>
-        <label>Повтор<select id="aRepeat">
-          <option value="">Без повтору</option>
-          <option value="щодня">Щодня</option>
-          <option value="щопонеділка">Щопонеділка</option>
-          <option value="щовівторка">Щовівторка</option>
-          <option value="щосереди">Щосереди</option>
-          <option value="щочетверга">Щочетверга</option>
-          <option value="щоп'ятниці">Щопʼятниці</option>
-          <option value="щосуботи">Щосуботи</option>
-          <option value="щонеділі">Щонеділі</option>
-          <option value="1-го числа">1-го числа щомісяця</option>
-        </select></label>
-        <button class="btn main" type="submit">Поставити нагадування</button>
-      </form>
-    </div>
-  </section>
-
-  <section id="tasks" hidden>
-    <div class="card" id="taskList"></div>
-  </section>
-
-  <section id="vidguky" hidden>
-    <div class="kpis" id="vKpis"></div>
-    <div class="card" id="vOpen" style="margin-top:12px"></div>
-    <div class="card" id="vPoints" style="margin-top:12px"><div class="empty">Завантажую…</div></div>
-  </section>
-
-  <section id="memory" hidden>
-    <div class="card" id="memList"></div>
-    <div class="card" style="margin-top:12px">
-      <form id="memForm">
-        <b id="memTitle">Новий запис</b>
-        <input type="hidden" id="mOld">
-        <label>Тема<input id="mTopic" placeholder="Тема"></label>
-        <label>Факт<textarea id="mFact" placeholder="Що запамʼятати"></textarea></label>
-        <button class="btn main" type="submit">Зберегти</button>
-      </form>
-    </div>
-  </section>
-
-  <section id="history" hidden>
-    <div class="card" id="histList"></div>
-  </section>
+  <main id="screen" class="stack"><div class="empty">Завантажую…</div></main>
 </div>
+
+<nav><div class="navbar">
+  <button type="button" data-go="today" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19.5z"/></svg>Сьогодні</button>
+  <button type="button" data-go="tasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="5"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>Задачі</button>
+  <button type="button" class="plus" data-sheet="add" aria-label="Нове нагадування"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></button>
+  <button type="button" data-go="vidguky"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3.5l2.5 5.3 5.8.7-4.3 4 1.1 5.7L12 16.4l-5.1 2.8 1.1-5.7-4.3-4 5.8-.7z"/></svg>Відгуки</button>
+  <button type="button" data-go="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 20v-8M12 20V5M18 20v-5"/></svg>Звіти</button>
+</div></nav>
+<div id="layer"></div>
 
 <script>
 var API = "https://obpmsgxanigythxkvrmh.supabase.co/functions/v1/asystent-api";
@@ -168,53 +202,58 @@ var TG = window.Telegram && Telegram.WebApp && Telegram.WebApp.initData ? Telegr
 // On a computer the app opens over the whole screen. Telegram's own ✕ in fullscreen first leaves fullscreen,
 // so the page has its own «Закрити» that shuts the app in one press.
 var DESKTOP = TG && ["tdesktop", "macos", "weba", "webk", "web"].indexOf(TG.platform) >= 0;
+var $ = function (id) { return document.getElementById(id); };
 if (TG) {
   TG.ready();
   TG.expand();
   if (DESKTOP && TG.isVersionAtLeast && TG.isVersionAtLeast("8.0") && TG.requestFullscreen) {
     try { TG.requestFullscreen(); } catch (e) { /* older client: stays a normal window */ }
   }
-  document.getElementById("close").hidden = false;
-  document.getElementById("close").onclick = function () { TG.close(); };
+  $("close").hidden = false;
+  $("close").onclick = function () { TG.close(); };
 }
 var DEMO = !TG;
-var state = null;
-var $ = function (id) { return document.getElementById(id); };
+var state = null, vid = null, vLoaded = 0;
+var current = "today", taskTab = "today";
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+function haptic(kind) { try { TG && TG.HapticFeedback && TG.HapticFeedback.notificationOccurred(kind); } catch (e) {} }
 
 var KYIV = { timeZone: "Europe/Kyiv" };
 function dayKey(d) { return new Intl.DateTimeFormat("en-CA", KYIV).format(d); }
 function hm(d) { return new Intl.DateTimeFormat("uk-UA", Object.assign({ hour: "2-digit", minute: "2-digit", hourCycle: "h23" }, KYIV)).format(d); }
-function dayLabel(d) {
-  var k = dayKey(d), today = dayKey(new Date()), tomorrow = dayKey(new Date(Date.now() + 864e5));
-  if (k < today) return "Прострочено";
-  if (k === today) return "Сьогодні";
-  if (k === tomorrow) return "Завтра";
-  return new Intl.DateTimeFormat("uk-UA", Object.assign({ weekday: "long", day: "numeric", month: "long" }, KYIV)).format(d);
-}
+function dm(d) { return new Intl.DateTimeFormat("uk-UA", Object.assign({ day: "2-digit", month: "2-digit" }, KYIV)).format(d); }
+function longDate(d) { var s = new Intl.DateTimeFormat("uk-UA", Object.assign({ weekday: "long", day: "numeric", month: "long" }, KYIV)).format(d); return s[0].toUpperCase() + s.slice(1); }
+function one(x) { return x == null ? "—" : Number(x).toFixed(1).replace(".", ","); }
+function daysSince(iso) { return Math.max(0, Math.round((new Date(dayKey(new Date())) - new Date(iso)) / 864e5)); }
+function plural(n, a, b, c) { var m = n % 10, h = n % 100; return n + " " + (m === 1 && h !== 11 ? a : m >= 2 && m <= 4 && (h < 10 || h >= 20) ? b : c); }
 
+// ---------- Example data for a browser preview ----------
 function demoData() {
-  var h = 36e5, now = Date.now();
+  var h = 36e5, now = Date.now(), today = dayKey(new Date());
   return {
     name: "Приклад", now: new Date().toISOString(),
     open: [
       { id: 1, text: "Відправити пуш акції тижня", due_at: new Date(now - 2 * h).toISOString(), status: "sent", repeat: null },
-      { id: 2, text: "Перевірити результат минулого пушу", due_at: new Date(now + 3 * h).toISOString(), status: "pending", repeat: null },
-      { id: 3, text: "Зібрати звіт за тиждень", due_at: new Date(now + 50 * h).toISOString(), status: "pending", repeat: null }
+      { id: 2, text: "Перевірити результат минулого пушу", due_at: new Date(now + 2 * h).toISOString(), status: "pending", repeat: null },
+      { id: 3, text: "Зібрати звіт за тиждень", due_at: new Date(now + 50 * h).toISOString(), status: "pending", repeat: "щонеділі 20:00" }
     ],
     closed: [
-      { id: 4, text: "Пуш про нову позицію меню", due_at: new Date(now - 26 * h).toISOString(), status: "done", closed_at: new Date(now - 25 * h).toISOString() },
+      { id: 4, text: "Нарада маркетингу", due_at: new Date(now - 3 * h).toISOString(), status: "done", closed_at: new Date(now - 3 * h).toISOString() },
       { id: 5, text: "Пуш з купоном для тих, хто давно не був", due_at: new Date(now - 74 * h).toISOString(), status: "missed", closed_at: new Date(now - 70 * h).toISOString() }
     ],
     month: { done: 7, missed: 3 },
-    tasks: { updated_at: new Date().toISOString(), text: "| # | Задача | Статус | Що зроблено | Наступний крок |\n|---|---|---|---|---|\n| 1 | Приклад задачі в роботі | 🟢 | Що вже зроблено | Що далі |\n| 2 | Задача, що чекає твого рішення | 🟡 | Чернетка готова | Твоя відповідь |\n| 3 | Закрита задача | ✅ | Усе зроблено | — |" },
-    memory: [
-      { topic: "Приклад теми", fact: "Тут буде факт із твоєї памʼяті." },
-      { topic: "Ще одна тема", fact: "Памʼять можна змінити або видалити прямо тут." }
-    ]
+    tasks: { updated_at: new Date().toISOString(), text: "| # | Задача | Статус | Що зроблено | Наступний крок |\n|---|---|---|---|---|\n| 1 | Приклад задачі в роботі | 🟢 | Що вже зроблено | Що далі |\n| 2 | Задача, що чекає твого рішення | 🟡 | Чернетка готова | Твоя відповідь |" },
+    trello: {
+      updated_at: new Date().toISOString(), board_url: "https://trello.com",
+      week: { label: "02–08.11", total: 12, done: 5, days: [{ date: today, label: "Пн", total: 6, done: 3 }, { date: "", label: "Вт", total: 6, done: 2 }, { date: "", label: "Ср", total: 0, done: 0 }, { date: "", label: "Чт", total: 0, done: 0 }, { date: "", label: "Пт", total: 0, done: 0 }, { date: "", label: "Сб", total: 0, done: 0 }] },
+      today: { date: today, card: "сьогодні", items: [{ name: "Приклад задачі на сьогодні", done: true }, { name: "Ще одна задача з Trello" }] },
+      tails: [{ name: "Приклад хвоста з минулих днів", since: dayKey(new Date(now - 72 * h)) }],
+      main: [{ name: "Приклад головної задачі місяця", card: "Задачі на місяць" }]
+    },
+    reports: [{ id: 1, file_name: "Звіт приклад.pdf", caption: "Звіт за минулий тиждень", send_after: new Date(now - 24 * h).toISOString(), sent_at: new Date(now - 24 * h).toISOString() }],
+    memory: [{ topic: "Приклад теми", fact: "Тут буде факт із твоєї памʼяті." }]
   };
 }
-
 function demoVidguky() {
   return {
     complaints: { week: 4, month: 15, open: 2, openList: [{ day: dayKey(new Date()), point: "Точка А", channel: "google", text: "Приклад скарги без рішення" }] },
@@ -223,11 +262,12 @@ function demoVidguky() {
     lowReviews: [{ point: "Точка Б", rating: 2, text: "Приклад низького відгуку з Google" }],
     points: [
       { name: "Точка А", city: "Місто", admins: ["Адміністратор 1"], complaintsWeek: 3, complaintsOpen: 2, appWeek: 60, appAvgWeek: 4.5, google: 4.4, googleChange: -0.1 },
-      { name: "Точка Б", city: "Місто", admins: [], complaintsWeek: 1, complaintsOpen: 0, appWeek: 60, appAvgWeek: 4.9, google: 4.8, googleChange: 0 }
+      { name: "Точка Б", city: "Місто", admins: [], complaintsWeek: 0, complaintsOpen: 0, appWeek: 60, appAvgWeek: 4.9, google: 4.8, googleChange: 0 }
     ]
   };
 }
 
+// ---------- Server ----------
 function call(action, args) {
   if (DEMO) return Promise.resolve(action === "vidguky" ? demoVidguky() : state || demoData());
   var body = Object.assign({ action: action, initData: TG.initData }, args || {});
@@ -237,132 +277,311 @@ function call(action, args) {
 }
 function run(action, args) {
   $("err").hidden = true;
-  return call(action, args).then(render).catch(function (e) { $("err").textContent = e.message; $("err").hidden = false; });
+  return call(action, args).then(function (s) { state = s; show(current); return s; })
+    .catch(function (e) { $("err").textContent = e.message; $("err").hidden = false; haptic("error"); throw e; });
 }
-
-function render(s) {
-  state = s;
-  var hour = Number(new Intl.DateTimeFormat("en-GB", Object.assign({ hour: "numeric", hourCycle: "h23" }, KYIV)).format(new Date()));
-  $("hello").textContent = (hour < 12 ? "Доброго ранку" : hour < 18 ? "Добрий день" : "Добрий вечір") + (s.name ? ", " + s.name.split(" ")[0] : "") + "!";
-  var sent = s.open.filter(function (r) { return r.status === "sent"; }).length;
-  $("sub").textContent = sent ? "Чекає твого «Зроблено»: " + sent + "." : "Усе під контролем.";
-  $("sOpen").textContent = s.open.length;
-  $("sDone").textContent = s.month.done;
-  $("sMiss").textContent = s.month.missed;
-
-  var html = "", last = "";
-  s.open.forEach(function (r) {
-    var d = new Date(r.due_at), g = r.status === "sent" ? "Чекає «Зроблено»" : dayLabel(d);
-    if (g !== last) { html += '<div class="group">' + esc(g) + "</div>"; last = g; }
-    html += '<div class="item"><div class="t">' + hm(d) + (g === "Сьогодні" || g === "Завтра" || g === "Чекає «Зроблено»" ? "" : "<small>" + d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", timeZone: "Europe/Kyiv" }) + "</small>") + '</div><div class="body">' +
-      '<div class="txt">' + (r.status === "sent" ? '<span class="pill sent">надіслано</span>' : "") + esc(r.text) + "</div>" +
-      (r.repeat ? '<div class="meta">Повтор: ' + esc(r.repeat) + "</div>" : "") +
-      '<div class="acts"><button class="do" data-act="done" data-id="' + r.id + '">✓ Зроблено</button>' +
-      '<button data-act="snooze" data-to="hour" data-id="' + r.id + '">+1 година</button>' +
-      '<button data-act="snooze" data-to="tomorrow" data-id="' + r.id + '">Завтра</button>' +
-      '<button data-act="cancel" data-id="' + r.id + '">Скасувати</button></div></div></div>';
-  });
-  $("openList").innerHTML = html || '<div class="empty">Відкритих нагадувань немає. Постав нове нижче або напиши боту.</div>';
-
-  $("histList").innerHTML = s.closed.length ? s.closed.map(function (r) {
-    var d = new Date(r.due_at);
-    return '<div class="item"><div class="t">' + hm(d) + "<small>" + d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", timeZone: "Europe/Kyiv" }) + '</small></div><div class="body"><div class="txt"><span class="pill ' + r.status + '">' + (r.status === "done" ? "зроблено" : "пропущено") + "</span>" + esc(r.text) + "</div>" +
-      (r.status === "missed" ? '<div class="acts"><button data-act="done" data-id="' + r.id + '">Насправді зроблено</button></div>' : "") + "</div></div>";
-  }).join("") : '<div class="empty">За два тижні ще нічого не закрито.</div>';
-
-  renderTasks(s.tasks);
-
-  $("memList").innerHTML = s.memory.length ? s.memory.map(function (m, i) {
-    return '<div class="mem"><b>' + esc(m.topic) + '</b><div class="txt">' + esc(m.fact) + '</div><div class="acts"><button data-mem="edit" data-i="' + i + '">Змінити</button><button data-mem="del" data-i="' + i + '">Видалити</button></div></div>';
-  }).join("") : '<div class="empty">Памʼять порожня. Надішли боту .txt файл або додай запис нижче.</div>';
-}
-
-// The task list is the project's Markdown table: | # | Задача | Статус | Що зроблено | Наступний крок |.
-var STATUS = [["🟢", "В роботі"], ["🟡", "Чекає рішення"], ["⏸", "На паузі"], ["✅", "Готово"]];
-function md(s) { return esc(s).replace(/`([^`]+)`/g, "$1").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>"); }
-function renderTasks(t) {
-  if (!t || !t.text) { $("taskList").innerHTML = '<div class="empty">Список задач ще не підтягнувся з проєкту.</div>'; return; }
-  var rows = t.text.split("\n").filter(function (l) { return /^\|\s*\d+\s*\|/.test(l); }).map(function (l) {
-    var c = l.split("|").slice(1, -1).map(function (x) { return x.trim(); });
-    return { n: c[0], name: c[1] || "", status: c[2] || "", done: c[3] || "", next: c[4] || "" };
-  });
-  if (!rows.length) { $("taskList").innerHTML = '<div class="task"><div class="txt">' + md(t.text).replace(/\n/g, "<br>") + "</div></div>"; return; }
-  var html = "";
-  STATUS.forEach(function (st) {
-    var list = rows.filter(function (r) { return r.status.indexOf(st[0]) === 0; });
-    if (!list.length) return;
-    var items = list.map(function (r) {
-      return '<div class="task"><b><span class="num">' + esc(r.n) + "</span>" + md(r.name) + "</b>" +
-        (r.next && r.next !== "—" ? '<div class="txt"><span class="meta">Далі:</span> ' + md(r.next) + "</div>" : "") +
-        (r.done ? '<div class="meta">' + md(r.done) + "</div>" : "") + "</div>";
-    }).join("");
-    html += st[0] === "✅" ? '<details class="done"><summary>Готово: ' + list.length + "</summary>" + items + "</details>" : '<div class="group">' + st[1] + " · " + list.length + "</div>" + items;
-  });
-  $("taskList").innerHTML = html + '<div class="empty">Оновлено ' + new Date(t.updated_at).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Kyiv" }) + "</div>";
-}
-
-function one(x) { return x == null ? "—" : Number(x).toFixed(1); }
-function renderVidguky(v) {
-  var c = v.complaints, a = v.app, g = v.google;
-  $("vKpis").innerHTML =
-    '<div class="kpi"><b>' + (c ? c.week : "—") + "</b><span>скарг за 7 днів</span></div>" +
-    '<div class="kpi' + (c && c.open ? " bad" : "") + '"><b>' + (c ? c.open : "—") + "</b><span>скарг без рішення</span></div>" +
-    '<div class="kpi"><b>' + (a ? one(a.avgWeek) : "—") + "</b><span>оцінка в апці за 7 днів" + (a ? " · " + a.week + " оцінок" : "") + "</span></div>" +
-    '<div class="kpi"><b>' + (g ? one(g.avg) : "—") + "</b><span>Google, середнє по мережі</span></div>";
-  var open = (c ? c.openList : []).map(function (x) {
-    return '<div class="task"><b>' + esc(x.point) + ' <span class="meta">' + esc(x.day) + " · " + esc(x.channel) + '</span></b><div class="txt">' + esc(x.text) + "</div></div>";
-  }).concat(v.lowReviews.map(function (x) {
-    return '<div class="task"><b>' + esc(x.point) + ' <span class="meta">Google ' + x.rating + '★</span></b><div class="txt">' + esc(x.text) + "</div></div>";
-  }));
-  $("vOpen").hidden = !open.length;
-  $("vOpen").innerHTML = '<div class="group">Потребує уваги</div>' + open.join("");
-  $("vPoints").innerHTML = '<div class="group">Точки · ' + v.points.length + "</div>" + v.points.map(function (p) {
-    var ch = p.googleChange ? (p.googleChange > 0 ? " +" : " ") + one(p.googleChange) : "";
-    return '<div class="point"><div class="head"><b>' + esc(p.name) + '</b><span class="meta">' + esc(p.city) + "</span></div>" +
-      '<div class="meta">' + (p.admins.length ? "Відповідає: " + esc(p.admins.join(", ")) : "Адміністратора немає") + "</div>" +
-      '<div class="chips"><span class="chip' + (p.complaintsOpen ? " bad" : "") + '">скарг за 7 дн: ' + p.complaintsWeek + (p.complaintsOpen ? " · без рішення " + p.complaintsOpen : "") + "</span>" +
-      '<span class="chip' + (p.googleChange < 0 ? " bad" : p.googleChange > 0 ? " ok" : "") + '">Google ' + one(p.google) + ch + "</span>" +
-      '<span class="chip">апка ' + one(p.appAvgWeek) + (p.appWeek ? " · " + p.appWeek : "") + "</span></div></div>";
-  }).join("");
-}
-var vLoaded = 0;
 function loadVidguky() {
   if (Date.now() - vLoaded < 60000) return;
   vLoaded = Date.now();
-  call("vidguky").then(renderVidguky).catch(function (e) { vLoaded = 0; $("vPoints").innerHTML = '<div class="empty">' + esc(e.message) + "</div>"; });
+  call("vidguky").then(function (v) { vid = v; if (current === "today" || current === "vidguky") show(current); })
+    .catch(function (e) { vLoaded = 0; vid = { error: e.message }; if (current === "vidguky") show(current); });
 }
 
-document.addEventListener("click", function (e) {
-  var b = e.target.closest("button");
+// ---------- Pieces ----------
+function ring(pct) {
+  var size = 84, r = 36, c = 2 * Math.PI * r;
+  return '<svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="' + r + '" fill="none" stroke="var(--soft)" stroke-width="10"/>' +
+    (pct > 0 ? '<circle cx="42" cy="42" r="' + r + '" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + (c * Math.min(pct, 100) / 100).toFixed(1) + " " + c.toFixed(1) + '" transform="rotate(-90 42 42)"/>' : "") + "</svg>";
+}
+function weekCard(t) {
+  if (!t || !t.week) return '<div class="card"><div class="empty"><b>Trello ще не підтягнуто</b>Оновлюю о 8:00, 14:00 і 18:00.</div></div>';
+  var w = t.week, pct = w.total ? Math.round(w.done * 100 / w.total) : 0, today = dayKey(new Date());
+  var days = w.days.map(function (d) {
+    var cls = d.date === today ? "on" : d.total && d.done < d.total && d.date < today ? "tail" : d.total && d.done === d.total ? "full" : "";
+    return '<button type="button" class="day ' + cls + '" data-day="' + esc(d.date) + '">' + esc(d.label) + "<b>" + (d.date ? Number(d.date.slice(8)) : "") + "</b><i></i></button>";
+  }).join("");
+  return '<div class="card week"><div class="ring">' + ring(pct) + "<b>" + pct + '%</b></div><div class="wk"><h3>Тиждень ' + esc(w.label) + "</h3><p>" + w.done + " з " + plural(w.total, "задачі", "задач", "задач") + ' у Trello закрито</p><div class="days">' + days + "</div></div></div>";
+}
+function waiting() { return (state.open || []).filter(function (r) { return r.status === "sent"; }); }
+
+// What to look at first: a reminder waiting for «Зроблено», a complaint without a decision, the oldest tail, then the next reminder.
+function focusCard() {
+  var w = waiting(), t = state.trello, now = Date.now();
+  if (w.length) {
+    var r = w[0];
+    return focusHtml("Чекає «Зроблено»", r.text, "Нагадування з " + hm(new Date(r.due_at)) + (w.length > 1 ? ", і ще " + (w.length - 1) + " чекають." : ". Бот нагадуватиме щогодини, поки не позначиш."),
+      '<button type="button" class="main" data-act="done" data-id="' + r.id + '">✓ Зроблено</button><button type="button" class="ghost" data-act="snooze" data-to="hour" data-id="' + r.id + '">+1 година</button>');
+  }
+  if (vid && vid.complaints && vid.complaints.open) {
+    return focusHtml("Відгуки", plural(vid.complaints.open, "скарга", "скарги", "скарг") + " без рішення", "Найсвіжіша: " + (vid.complaints.openList[0] ? vid.complaints.openList[0].point : "") + ". Рішення вносить адміністратор у «Відгуках».",
+      '<button type="button" class="main" data-go="vidguky">Подивитись точки</button>');
+  }
+  if (t && t.tails && t.tails.length) {
+    var old = t.tails[0];
+    return focusHtml("Хвіст " + plural(daysSince(old.since), "день", "дні", "днів"), old.name, "Найстаріша незакрита задача з Trello. Всього хвостів: " + t.tails.length + ".",
+      '<button type="button" class="main" data-tab="tails">Усі хвости</button>');
+  }
+  var next = (state.open || []).filter(function (r) { return new Date(r.due_at) > now; })[0];
+  if (next) return focusHtml("Далі", next.text, longDate(new Date(next.due_at)) + " о " + hm(new Date(next.due_at)) + ".", "");
+  return focusHtml("Все чисто", "Нагадувань і хвостів немає", "Можна взяти щось із «Головного» на місяць.", '<button type="button" class="main" data-tab="main">Головне</button>');
+}
+function focusHtml(tag, big, why, buttons) {
+  return '<div class="focus"><span class="ftag">' + esc(tag) + '</span><div class="big">' + esc(big) + '</div><div class="why">' + esc(why) + "</div>" + (buttons ? '<div class="row">' + buttons + "</div>" : "") + "</div>";
+}
+function kpis() {
+  var t = state.trello, c = vid && vid.complaints, g = vid && vid.google;
+  var gch = vid && vid.points ? vid.points.filter(function (p) { return p.googleChange; }) : [];
+  var gDelta = gch.length ? gch.reduce(function (a, p) { return a + p.googleChange; }, 0) / gch.length : 0;
+  return '<div class="kpis">' +
+    '<button type="button" class="kpi' + (t && t.tails.length ? " alert" : "") + '" data-tab="tails"><span class="top">Хвости</span><span class="num">' + (t ? t.tails.length : "—") + '</span><span class="sub">незакриті з минулих днів</span></button>' +
+    '<div class="kpi' + (waiting().length ? " alert" : "") + '"><span class="top">Нагадування</span><span class="num">' + waiting().length + '</span><span class="sub">чекають «Зроблено» · за місяць ' + state.month.done + "/" + (state.month.done + state.month.missed) + "</span></div>" +
+    '<button type="button" class="kpi' + (c && c.open ? " alert" : "") + '" data-go="vidguky"><span class="top">Скарги</span><span class="num">' + (c ? c.open : "—") + '</span><span class="sub">без рішення · за 7 днів ' + (c ? c.week : "—") + "</span></button>" +
+    '<button type="button" class="kpi" data-go="vidguky"><span class="top">Google' + (Math.abs(gDelta) >= 0.05 ? ' <span class="delta ' + (gDelta > 0 ? "up" : "down") + '">' + (gDelta > 0 ? "+" : "−") + one(Math.abs(gDelta)) + "</span>" : "") + '</span><span class="num">' + (g ? one(g.avg) : "—") + '<small>★</small></span><span class="sub">середнє по мережі, 30 днів</span></button></div>';
+}
+
+// ---------- Screens ----------
+var screens = {};
+screens.today = function () {
+  var today = dayKey(new Date()), now = Date.now();
+  var items = (state.open || []).filter(function (r) { return dayKey(new Date(r.due_at)) <= today; }).map(function (r) { return { r: r, done: false }; })
+    .concat((state.closed || []).filter(function (r) { return r.status === "done" && dayKey(new Date(r.closed_at)) === today; }).map(function (r) { return { r: r, done: true }; }))
+    .sort(function (a, b) { return new Date(a.r.due_at) - new Date(b.r.due_at); });
+  var tl = items.map(function (x) {
+    var r = x.r, d = new Date(r.due_at), late = !x.done && (r.status === "sent" || d < now);
+    return '<div class="ti' + (x.done ? " done" : late ? " late" : "") + '" data-rid="' + r.id + '"><div class="t">' + hm(d) + (dayKey(d) < today ? "<small>" + dm(d) + "</small>" : "") + '</div><div class="rail"><i></i></div><div class="body"><div class="txt">' +
+      (r.status === "sent" && !x.done ? '<span class="tag warn">чекає «Зроблено»</span> ' : "") + esc(r.text) + "</div>" +
+      (x.done ? "" : '<div class="acts"><button type="button" class="pill do" data-act="done" data-id="' + r.id + '">✓ Зроблено</button><button type="button" class="pill" data-act="snooze" data-to="hour" data-id="' + r.id + '">+1 год</button><button type="button" class="pill" data-act="snooze" data-to="tomorrow" data-id="' + r.id + '">Завтра</button></div>') + "</div></div>";
+  }).join("");
+  return focusCard() + weekCard(state.trello) + kpis() +
+    '<h2>Нагадування на сьогодні <button type="button" data-sheet="plan">Весь план</button></h2>' +
+    '<div class="card">' + (tl || '<div class="empty"><b>На сьогодні нагадувань немає</b>Натисни «+» внизу, щоб поставити.</div>') + "</div>";
+};
+
+var STATUS = [["🟢", "в роботі", "ok"], ["🟡", "чекає рішення", "warn"], ["⏸", "на паузі", ""], ["✅", "готово", "acc"]];
+function projectRows() {
+  var t = state.tasks;
+  if (!t || !t.text) return [];
+  return t.text.split("\n").filter(function (l) { return /^\|\s*\d+\s*\|/.test(l); }).map(function (l) {
+    var c = l.split("|").slice(1, -1).map(function (x) { return x.trim().replace(/\*\*/g, "").replace(/`/g, ""); });
+    var st = STATUS.filter(function (s) { return (c[2] || "").indexOf(s[0]) === 0; })[0] || ["", "", ""];
+    return { name: c[1] || "", status: st, next: c[4] || "", done: c[3] || "" };
+  }).filter(function (r) { return r.status[0] !== "✅"; });
+}
+function taskLists() {
+  var t = state.trello || { today: null, tails: [], main: [] };
+  return {
+    today: (t.today ? t.today.items : []).map(function (i) { return { name: i.name, done: i.done, tag: "Trello · сьогодні", cls: "" }; }),
+    tails: t.tails.map(function (i) { var n = daysSince(i.since); return { name: i.name, tag: "висить " + plural(n, "день", "дні", "днів"), cls: n >= 3 ? "bad" : "warn" }; }),
+    main: t.main.map(function (i) { return { name: i.name, tag: i.card || "Головне", cls: "" }; }),
+    projects: projectRows().map(function (r) { return { name: r.name, tag: "проєкт · " + r.status[1], cls: r.status[2], next: r.next, project: true }; })
+  };
+}
+screens.tasks = function () {
+  var L = taskLists(), names = { today: "Сьогодні", tails: "Хвости", main: "Головне", projects: "Проєкти" };
+  var seg = Object.keys(names).map(function (k) {
+    var n = k === "today" ? L.today.filter(function (i) { return !i.done; }).length : L[k].length;
+    return '<button type="button" class="' + (k === taskTab ? "on" : "") + '" data-tab="' + k + '">' + names[k] + "<span>" + n + "</span></button>";
+  }).join("");
+  var list = L[taskTab].map(function (t, i) {
+    return '<button type="button" class="task' + (t.done ? " done" : "") + (t.project ? " plain" : "") + '" data-task="' + i + '">' + (t.project ? "" : '<span class="box"></span>') + '<span><span class="name">' + esc(t.name) + '</span><span class="meta"><span class="tag ' + t.cls + '">' + esc(t.tag) + "</span></span>" +
+      (t.next && t.next !== "—" ? '<span class="meta" style="color:var(--muted);font-size:13px">Далі: ' + esc(t.next) + "</span>" : "") + "</span></button>";
+  }).join("");
+  var empty = { today: "На сьогодні в Trello задач немає", tails: "Хвостів немає", main: "Головне на місяць не заповнене", projects: "Активних проєктів немає" }[taskTab];
+  var t = state.trello;
+  return '<div class="seg">' + seg + '</div><div class="list">' + (list || '<div class="card empty"><b>' + empty + "</b></div>") + "</div>" +
+    '<div class="note">' + (taskTab === "projects" ? (state.tasks ? "Список проєктів з Claude, оновлено " + dm(new Date(state.tasks.updated_at)) : "") :
+      t ? "Trello оновлено " + dm(new Date(t.updated_at)) + " о " + hm(new Date(t.updated_at)) + " · оновлюю о 8:00, 14:00, 18:00" : "Trello ще не підтягнуто") + "</div>";
+};
+
+screens.vidguky = function () {
+  if (!vid) return '<div class="empty">Завантажую «Відгуки»…</div>';
+  if (vid.error) return '<div class="err">' + esc(vid.error) + "</div>";
+  var c = vid.complaints, a = vid.app, g = vid.google;
+  var pts = vid.points.slice().sort(function (x, y) { return (y.complaintsOpen - x.complaintsOpen) || (y.complaintsWeek - x.complaintsWeek) || ((x.googleChange || 0) - (y.googleChange || 0)); });
+  var alerts = (c ? c.openList : []).map(function (x) { return '<div class="alertrow"><b>' + esc(x.point) + ' <span class="tag bad">скарга · ' + esc(x.channel) + '</span></b><div class="txt">' + esc(x.text) + '</div><small class="note" style="text-align:left;padding:0">' + esc(x.day) + "</small></div>"; })
+    .concat(vid.lowReviews.map(function (x) { return '<div class="alertrow"><b>' + esc(x.point) + ' <span class="tag warn">Google ' + x.rating + '★</span></b><div class="txt">' + esc(x.text) + "</div></div>"; })).join("");
+  return '<div class="kpis">' +
+    '<div class="kpi"><span class="top">Скарги</span><span class="num">' + (c ? c.week : "—") + '</span><span class="sub">за 7 днів · за 30 днів ' + (c ? c.month : "—") + "</span></div>" +
+    '<div class="kpi' + (c && c.open ? " alert" : "") + '"><span class="top">Без рішення</span><span class="num">' + (c ? c.open : "—") + '</span><span class="sub">потрібна дія адміністратора</span></div>' +
+    '<div class="kpi"><span class="top">Оцінка в апці</span><span class="num">' + (a ? one(a.avgWeek) : "—") + '<small>★</small></span><span class="sub">' + (a ? plural(a.week, "оцінка", "оцінки", "оцінок") + " за 7 днів, низьких " + a.lowWeek : "") + "</span></div>" +
+    '<div class="kpi"><span class="top">Google</span><span class="num">' + (g ? one(g.avg) : "—") + '<small>★</small></span><span class="sub">середнє по мережі</span></div></div>' +
+    (alerts ? '<h2>Потребує уваги</h2><div class="card">' + alerts + "</div>" : "") +
+    "<h2>Точки · " + pts.length + ", спершу проблемні</h2><div class='list'>" + pts.map(function (p) {
+      var st = p.complaintsOpen ? ["bad", "Без рішення: " + p.complaintsOpen] : p.complaintsWeek ? ["warn", "Скарги за тиждень: " + p.complaintsWeek] : p.googleChange < 0 ? ["warn", "Google падає"] : ["ok", "Все ок"];
+      var ch = p.googleChange ? (p.googleChange > 0 ? " +" : " −") + one(Math.abs(p.googleChange)) : "";
+      return '<div class="point' + (p.complaintsOpen ? " bad" : "") + '"><div class="head"><b>' + esc(p.name) + '</b><span class="tag ' + st[0] + '">' + esc(st[1]) + '</span></div><div class="who">' + esc(p.city) + " · " + (p.admins.length ? "відповідає " + esc(p.admins.join(", ")) : "адміністратора немає") + "</div>" +
+        '<div class="chips"><span class="chip">Google ' + one(p.google) + ch + '</span><span class="chip">апка ' + one(p.appAvgWeek) + (p.appWeek ? " · " + p.appWeek : "") + '</span><span class="chip">скарг за 7 дн ' + p.complaintsWeek + "</span></div></div>";
+    }).join("") + "</div><div class='note'>Дані з бота «Відгуки», тільки перегляд</div>";
+};
+
+screens.reports = function () {
+  var t = state.trello, today = dayKey(new Date()), html = "";
+  if (t && t.week) {
+    var w = t.week, pct = w.total ? Math.round(w.done * 100 / w.total) : 0;
+    var max = Math.max.apply(null, w.days.map(function (d) { return d.total; }).concat([1]));
+    html += '<div class="card"><div class="week"><div class="ring">' + ring(pct) + "<b>" + pct + '%</b></div><div class="wk"><h3>Тиждень ' + esc(w.label) + "</h3><p>" + w.done + " з " + w.total + ' закрито. Звіт складу в неділю о 20:00, PDF прийде в бот у понеділок о 9:00.</p></div></div><div class="bars">' +
+      w.days.map(function (d) {
+        var h = d.total ? Math.max(8, d.total / max * 86) : 4, fill = d.total ? d.done / d.total * 100 : 0;
+        return '<div class="' + (d.date === today ? "today" : "") + '"><em>' + (d.total ? d.done + "/" + d.total : "–") + '</em><i style="height:' + h + 'px;display:flex;align-items:flex-end"><b style="height:' + fill + '%"></b></i>' + esc(d.label) + "</div>";
+      }).join("") + "</div></div>";
+  } else html += '<div class="card empty"><b>Trello ще не підтягнуто</b>Після першого оновлення тут буде тиждень по днях.</div>';
+  var reps = state.reports || [];
+  html += "<h2>Звіти PDF</h2>" + '<div class="card">' + (reps.length ? reps.map(function (r) {
+    var sent = r.sent_at ? "надіслано в бот " + dm(new Date(r.sent_at)) + " о " + hm(new Date(r.sent_at)) : "прийде " + dm(new Date(r.send_after)) + " о " + hm(new Date(r.send_after));
+    return '<div class="pdf"><span><b>' + esc(r.file_name.replace(/\.pdf$/i, "")) + "</b><small>" + sent + "</small></span>" + (r.sent_at ? '<button type="button" class="pill" data-report="' + r.id + '">Надіслати ще раз</button>' : '<span class="tag acc">в черзі</span>') + "</div>";
+  }).join("") : '<div class="empty"><b>Звітів ще немає</b>Перший прийде в бот у понеділок о 9:00.</div>') + "</div>";
+  return html;
+};
+
+screens.memory = function () {
+  return '<div class="card">' + (state.memory.length ? state.memory.map(function (m, i) {
+    return '<div class="mem"><b>' + esc(m.topic) + '</b><div class="txt">' + esc(m.fact) + '</div><div class="acts"><button type="button" class="pill" data-mem="edit" data-i="' + i + '">Змінити</button><button type="button" class="pill" data-mem="del" data-i="' + i + '">Видалити</button></div></div>';
+  }).join("") : '<div class="empty"><b>Памʼять порожня</b>Надішли боту .txt файл або додай запис.</div>') + '</div><button type="button" class="pill do big" data-mem="new">Додати запис</button>';
+};
+screens.history = function () {
+  return '<div class="card">' + (state.closed.length ? state.closed.map(function (r) {
+    var d = new Date(r.due_at);
+    return '<div class="ti' + (r.status === "done" ? " done" : " late") + '"><div class="t">' + hm(d) + "<small>" + dm(d) + '</small></div><div class="rail"><i></i></div><div class="body"><div class="txt"><span class="tag ' + (r.status === "done" ? "ok" : "bad") + '">' + (r.status === "done" ? "зроблено" : "пропущено") + "</span> " + esc(r.text) + "</div>" +
+      (r.status === "missed" ? '<div class="acts"><button type="button" class="pill" data-act="done" data-id="' + r.id + '">Насправді зроблено</button></div>' : "") + "</div></div>";
+  }).join("") : '<div class="empty">За два тижні ще нічого не закрито.</div>') + "</div>";
+};
+
+var TITLES = { tasks: "Задачі", vidguky: "Відгуки", reports: "Звіти", memory: "Памʼять", history: "Історія" };
+var SUB = { memory: 1, history: 1 };
+function show(name) {
+  if (!state) return;
+  var changed = name !== current;
+  current = name;
+  $("screen").innerHTML = screens[name]();
+  document.querySelectorAll(".navbar [data-go]").forEach(function (b) { b.classList.toggle("on", b.dataset.go === name); });
+  var hour = Number(new Intl.DateTimeFormat("en-GB", Object.assign({ hour: "numeric", hourCycle: "h23" }, KYIV)).format(new Date()));
+  var first = state.name ? state.name.split(" ")[0] : "";
+  $("title").textContent = name === "today" ? (hour < 12 ? "Доброго ранку" : hour < 18 ? "Добрий день" : "Добрий вечір") + (first ? ", " + first : "") : TITLES[name];
+  $("date").textContent = longDate(new Date());
+  $("back").hidden = !SUB[name];
+  if (TG && TG.BackButton) { if (SUB[name]) TG.BackButton.show(); else TG.BackButton.hide(); }
+  if (name === "vidguky" || name === "today") loadVidguky();
+  if (changed) window.scrollTo(0, 0);
+}
+function goBack() { show("today"); }
+if (TG && TG.BackButton) TG.BackButton.onClick(goBack);
+
+// ---------- Toast with «Скасувати»: the action waits 4 s, so undo needs no server call ----------
+var pending = null;
+function toast(text, undo) {
+  var old = document.querySelector(".toast"); if (old) old.remove();
+  var el = document.createElement("div"); el.className = "toast"; el.setAttribute("role", "status");
+  el.innerHTML = "<span>" + esc(text) + "</span>" + (undo ? '<button type="button">Скасувати</button>' : "");
+  document.body.appendChild(el);
+  if (undo) el.querySelector("button").onclick = function () { undo(); el.remove(); };
+  setTimeout(function () { el.remove(); }, undo ? 4000 : 2500);
+}
+function later(action, args, label) {
+  if (pending) { clearTimeout(pending.timer); pending.go(); }
+  var row = document.querySelector('[data-rid="' + args.id + '"]');
+  if (row) row.style.opacity = ".4";
+  var p = { go: function () { pending = null; run(action, args).catch(function () {}); } };
+  p.timer = setTimeout(p.go, 4000);
+  pending = p;
+  haptic("success");
+  toast(label, function () { clearTimeout(p.timer); pending = null; if (row) row.style.opacity = ""; });
+}
+
+// ---------- Sheets ----------
+function sheet(html) {
+  $("layer").innerHTML = '<div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true"><div><span class="grab"></span>' + html + "</div></div>";
+  var f = $("layer").querySelector("textarea,input:not([type=hidden])"); if (f && !TG) f.focus();
+}
+function closeSheet() { $("layer").innerHTML = ""; }
+var REPEATS = [["", "Без повтору"], ["щодня", "Щодня"], ["щопонеділка", "Щопонеділка"], ["щовівторка", "Щовівторка"], ["щосереди", "Щосереди"], ["щочетверга", "Щочетверга"], ["щоп'ятниці", "Щопʼятниці"], ["щосуботи", "Щосуботи"], ["щонеділі", "Щонеділі"], ["1-го числа", "1-го числа щомісяця"]];
+function addSheet(text) {
+  sheet('<h3>Нове нагадування</h3><form id="addForm" class="stack"><label for="aText">Про що нагадати<textarea id="aText" placeholder="Відправити пуш акції тижня">' + esc(text || "") + '</textarea></label>' +
+    '<div class="row"><label for="aDate">Дата<input type="date" id="aDate" value="' + dayKey(new Date()) + '"></label><label for="aTime">Час<input type="time" id="aTime" value="10:00"></label></div>' +
+    '<label for="aRepeat">Повтор<select id="aRepeat">' + REPEATS.map(function (r) { return '<option value="' + r[0] + '">' + r[1] + "</option>"; }).join("") + "</select></label>" +
+    '<button class="pill do big" type="submit">Поставити нагадування</button></form>');
+}
+function planSheet() {
+  var rows = (state.open || []).map(function (r) {
+    var d = new Date(r.due_at);
+    return '<div class="ti' + (r.status === "sent" ? " late" : "") + '"><div class="t">' + hm(d) + "<small>" + dm(d) + '</small></div><div class="rail"><i></i></div><div class="body"><div class="txt">' + esc(r.text) + "</div>" + (r.repeat ? '<div class="note" style="text-align:left;padding:0">Повтор: ' + esc(r.repeat) + "</div>" : "") +
+      '<div class="acts"><button type="button" class="pill" data-act="cancel" data-id="' + r.id + '">Скасувати</button></div></div></div>';
+  }).join("");
+  sheet("<h3>Весь план · " + (state.open || []).length + "</h3>" + (rows || '<div class="empty">Відкритих нагадувань немає.</div>'));
+}
+
+// ---------- Clicks ----------
+document.addEventListener("click", function (ev) {
+  var b = ev.target.closest("button,[data-close]");
   if (!b) return;
-  if (b.dataset.tab) {
-    ["plan", "tasks", "vidguky", "memory", "history"].forEach(function (t) { $(t).hidden = t !== b.dataset.tab; $("tab-" + t).setAttribute("aria-selected", String(t === b.dataset.tab)); });
-    if (b.dataset.tab === "vidguky") loadVidguky();
+  if (b.id === "back") { goBack(); return; }
+  if (b.hasAttribute("data-close")) { closeSheet(); return; }
+  if (b.dataset.go) { closeSheet(); show(b.dataset.go); return; }
+  if (b.dataset.tab) { taskTab = b.dataset.tab; show("tasks"); return; }
+  if (b.dataset.sheet === "add") { addSheet(); return; }
+  if (b.dataset.sheet === "plan") { planSheet(); return; }
+  if (b.dataset.sheet === "more") {
+    sheet('<h3>Ще</h3><div class="list"><button type="button" class="task plain" data-go="memory"><span><span class="name"><b>Памʼять</b></span><span class="meta"><span class="tag">' + plural(state.memory.length, "факт", "факти", "фактів") + '</span></span></span></button>' +
+      '<button type="button" class="task plain" data-go="history"><span><span class="name"><b>Історія нагадувань</b></span><span class="meta"><span class="tag ok">зроблено ' + state.month.done + '</span><span class="tag bad">пропущено ' + state.month.missed + "</span><span class=\"tag\">цього місяця</span></span></span></button></div>");
     return;
   }
-  if (b.dataset.act) { run(b.dataset.act, { id: Number(b.dataset.id), to: b.dataset.to }); return; }
+  if (b.dataset.act) {
+    var id = Number(b.dataset.id), r = (state.open || []).concat(state.closed || []).filter(function (x) { return x.id === id; })[0];
+    var label = b.dataset.act === "done" ? "Зроблено" : b.dataset.act === "cancel" ? "Скасовано" : b.dataset.to === "tomorrow" ? "Перенесено на завтра" : "Нагадаю через годину";
+    closeSheet();
+    later(b.dataset.act, { id: id, to: b.dataset.to }, label + (r ? ": " + r.text.slice(0, 32) + (r.text.length > 32 ? "…" : "") : ""));
+    return;
+  }
+  if (b.dataset.task) {
+    var t = taskLists()[taskTab][Number(b.dataset.task)];
+    var url = state.trello && state.trello.board_url;
+    sheet("<h3>" + esc(t.name) + '</h3><div class="ctx">' + esc(t.tag) + (t.project ? " · проєкт у Claude" : " · дошка «Мої задачі Кебабця»") + "</div>" +
+      (t.next && t.next !== "—" ? '<div class="ctx">Далі: ' + esc(t.next) + "</div>" : "") +
+      '<div class="row"><button type="button" class="pill do" data-remind="today" data-text="' + esc(t.name) + '">Нагадати сьогодні о 18:00</button><button type="button" class="pill" data-remind="tomorrow" data-text="' + esc(t.name) + '">Нагадати завтра о 10:00</button></div>' +
+      (url && !t.project ? '<a class="pill big" style="text-align:center;text-decoration:none;color:inherit" href="' + esc(url) + '" target="_blank" rel="noopener">Відкрити в Trello ↗</a>' : ""));
+    return;
+  }
+  if (b.dataset.remind) {
+    var tom = b.dataset.remind === "tomorrow", day = dayKey(new Date(Date.now() + (tom ? 864e5 : 0)));
+    closeSheet();
+    run("add", { text: b.dataset.text, date: day, time: tom ? "10:00" : "18:00", repeat: "" }).then(function () { haptic("success"); toast(tom ? "Нагадаю завтра о 10:00" : "Нагадаю сьогодні о 18:00"); }).catch(function () {});
+    return;
+  }
+  if (b.dataset.day) {
+    var d = state.trello && state.trello.week.days.filter(function (x) { return x.date === b.dataset.day; })[0];
+    if (d) toast(d.label + ": закрито " + d.done + " з " + d.total);
+    return;
+  }
+  if (b.dataset.report) {
+    b.disabled = true; b.textContent = "Надсилаю…";
+    run("report_send", { id: Number(b.dataset.report) }).then(function () { haptic("success"); toast("PDF надіслано в чат з ботом"); }).catch(function () {});
+    return;
+  }
   if (b.dataset.mem) {
-    var m = state.memory[Number(b.dataset.i)];
-    if (b.dataset.mem === "edit") { $("mOld").value = m.topic; $("mTopic").value = m.topic; $("mFact").value = m.fact; $("memTitle").textContent = "Змінити запис"; $("mTopic").focus(); }
-    else if (b.dataset.confirm === "1") run("memory_delete", { topic: m.topic });
-    else { b.dataset.confirm = "1"; b.textContent = "Точно видалити?"; }
+    var i = Number(b.dataset.i), m = state.memory[i];
+    if (b.dataset.mem === "del") {
+      if (b.dataset.confirm === "1") run("memory_delete", { topic: m.topic }).catch(function () {});
+      else { b.dataset.confirm = "1"; b.textContent = "Точно видалити?"; }
+      return;
+    }
+    m = b.dataset.mem === "edit" ? m : { topic: "", fact: "" };
+    sheet("<h3>" + (m.topic ? "Змінити запис" : "Новий запис") + '</h3><form id="memForm" class="stack"><input type="hidden" id="mOld" value="' + esc(m.topic) + '"><label for="mTopic">Тема<input id="mTopic" value="' + esc(m.topic) + '"></label><label for="mFact">Факт<textarea id="mFact">' + esc(m.fact) + '</textarea></label><button class="pill do big" type="submit">Зберегти</button></form>');
   }
 });
 
-$("addForm").addEventListener("submit", function (e) {
+document.addEventListener("submit", function (e) {
   e.preventDefault();
-  run("add", { text: $("aText").value, date: $("aDate").value, time: $("aTime").value, repeat: $("aRepeat").value })
-    .then(function () { if ($("err").hidden) $("aText").value = ""; });
+  if (e.target.id === "addForm") {
+    var text = $("aText").value, date = $("aDate").value, time = $("aTime").value, repeat = $("aRepeat").value;
+    run("add", { text: text, date: date, time: time, repeat: repeat }).then(function () { closeSheet(); haptic("success"); toast("Поставив нагадування на " + time); }).catch(function () {});
+  }
+  if (e.target.id === "memForm") {
+    run("memory_save", { topic: $("mTopic").value, fact: $("mFact").value, old: $("mOld").value }).then(function () { closeSheet(); toast("Збережено"); }).catch(function () {});
+  }
 });
-$("memForm").addEventListener("submit", function (e) {
-  e.preventDefault();
-  run("memory_save", { topic: $("mTopic").value, fact: $("mFact").value, old: $("mOld").value })
-    .then(function () { if ($("err").hidden) { $("mOld").value = ""; $("mTopic").value = ""; $("mFact").value = ""; $("memTitle").textContent = "Новий запис"; } });
-});
-$("aRepeat").addEventListener("change", function () { $("aDate").disabled = !!this.value; });
-$("aDate").value = dayKey(new Date());
+document.addEventListener("change", function (e) { if (e.target.id === "aRepeat") $("aDate").disabled = !!e.target.value; });
+
 $("demo").hidden = !DEMO;
-run("overview");
+run("overview").catch(function () { $("screen").innerHTML = ""; });
 </script>
 </body>
 </html>

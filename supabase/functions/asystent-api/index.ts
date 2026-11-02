@@ -2,7 +2,7 @@
 // and only people in as_people (the owner) get in.
 import { activeLocations, db } from "../_shared/common.ts";
 import { openReminders, type Reminder, scheduleNext } from "../_shared/reminders.ts";
-import { telegramUser, tg } from "../_shared/telegram.ts";
+import { sendDocument, telegramUser, tg } from "../_shared/telegram.ts";
 import { fromKyiv, kyiv, parseWhen } from "../_shared/time.ts";
 import { vidgukyData } from "../_shared/vidguky.ts";
 
@@ -33,6 +33,9 @@ async function overview(tgId: number) {
   const { data: memory } = await db.from("as_memory").select("topic,fact,updated_at").order("topic");
   const { data: me } = await db.from("as_people").select("name").eq("tg_id", tgId).maybeSingle();
   const { data: tasks } = await db.from("as_kv").select("value,updated_at").eq("key", "tasks").maybeSingle();
+  const { data: trello } = await db.from("as_kv").select("value,updated_at").eq("key", "trello").maybeSingle();
+  const { data: reports } = await db.from("as_outbox").select("id,file_name,caption,send_after,sent_at").eq("tg_id", tgId)
+    .order("send_after", { ascending: false }).limit(8);
   return {
     name: me?.name ?? "",
     now: now.toISOString(),
@@ -44,6 +47,8 @@ async function overview(tgId: number) {
     },
     memory: memory ?? [],
     tasks: tasks ? { text: tasks.value as string, updated_at: tasks.updated_at } : null,
+    trello: trello ? { ...(trello.value as object), updated_at: trello.updated_at } : null,
+    reports: reports ?? [],
   };
 }
 
@@ -118,6 +123,15 @@ async function handle(tgId: number, b: any) {
       must(topic && fact, "Потрібні тема і факт");
       if (b.old && b.old !== topic) await db.from("as_memory").delete().eq("topic", String(b.old));
       await db.from("as_memory").upsert({ topic, fact, updated_at: new Date().toISOString() });
+      return await overview(tgId);
+    }
+
+    // A weekly PDF again, straight into the chat.
+    case "report_send": {
+      const { data: f } = await db.from("as_outbox").select("file_name,file_b64,caption").eq("id", Number(b.id)).eq("tg_id", tgId).maybeSingle();
+      must(f?.file_b64, "Звіт не знайдено");
+      const bytes = Uint8Array.from(atob(f!.file_b64), (c) => c.charCodeAt(0));
+      must(await sendDocument(tgId, f!.file_name, bytes, f!.caption), "Telegram не прийняв файл, спробуй ще раз");
       return await overview(tgId);
     }
 
