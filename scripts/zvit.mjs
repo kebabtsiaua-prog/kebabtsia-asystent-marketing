@@ -66,15 +66,15 @@ function build(r) {
   return `<!doctype html><html lang="uk"><head><meta charset="utf-8">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Manrope:400,500,700|Unbounded:500,600&display=swap">
 <style>${CSS}</style></head><body>
-<div class="top"><div><div class="eyebrow">Звіт про виконану роботу · маркетинг</div><h1>${e(r.period)}</h1></div>
+<div class="top"><div><div class="eyebrow">${e(r.eyebrow ?? "Звіт про виконану роботу · маркетинг")}</div><h1>${e(r.period)}</h1></div>
 <div class="who"><b>${e(r.author)}</b><br>${e(r.role)}<br>Кебабця</div></div>
 <p class="summary">${e(r.summary)}</p>
 <div class="kpis"><div class="kpi main"><div class="num">${done}</div><span>задач закрито</span></div>
 <div class="kpi"><div class="num">${total}</div><span>задач було в плані</span></div>
 <div class="kpi"><div class="num">${pct}%</div><span>виконання плану</span></div>
-<div class="kpi"><div class="num">${total - done}</div><span>переходять на наступний тиждень</span></div></div>
+<div class="kpi"><div class="num">${total - done}</div><span>${e(r.carry ?? "переходять на наступний тиждень")}</span></div></div>
 <div class="days" style="--n:${r.days.length}">${days}</div>
-<h2>Що зроблено <small>за напрямами</small></h2><div class="groups">${groups}</div>
+<h2>Що зроблено <small>${e(r.groups_note ?? "за напрямами")}</small></h2><div class="groups">${groups}</div>
 <div class="page2"><h2>Що не закрито <small>переходить на ${e(r.next)}</small></h2>
 <table><thead><tr><th>Напрям</th><th>Задача</th><th>Відкрита з</th></tr></thead><tbody>${rows}</tbody></table>${note}
 <h2>План на ${e(r.next)}</h2><ul class="plan">${plan}</ul>
