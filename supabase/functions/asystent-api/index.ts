@@ -36,6 +36,7 @@ async function overview(tgId: number) {
   const { data: tasks } = await db.from("as_kv").select("value,updated_at").eq("key", "tasks").maybeSingle();
   const { data: trello } = await db.from("as_kv").select("value,updated_at").eq("key", "trello").maybeSingle();
   const { data: sheetPulled } = await db.from("as_kv").select("updated_at").eq("key", "push_sheet_pulled").maybeSingle();
+  const { data: queue } = await db.from("as_trello_queue").select("id,action,card,item,created_at").is("done_at", null).order("id");
   const { data: pushStats } = await db.from("as_kv").select("value").eq("key", "push_stats").maybeSingle();
   const { data: files } = await db.from("as_push_files").select("id,push_num,kind,file_name,n,created_at").order("created_at", { ascending: false }).limit(60);
   const { data: reports } = await db.from("as_outbox").select("id,file_name,caption,send_after,sent_at").eq("tg_id", tgId)
@@ -53,6 +54,7 @@ async function overview(tgId: number) {
     tasks: tasks ? { text: tasks.value as string, updated_at: tasks.updated_at } : null,
     trello: trello ? { ...(trello.value as object), updated_at: trello.updated_at } : null,
     reports: reports ?? [],
+    trello_queue: queue ?? [],
     push: { list: await pushList(), files: files ?? [], stats: pushStats?.value ?? null, sheet_at: sheetPulled?.updated_at ?? null },
   };
 }
@@ -170,6 +172,18 @@ async function handle(tgId: number, b: any) {
       });
       return await overview(tgId);
     }
+    // A tick in the app: shown at once, written to Trello by the next sync. Ticking back cancels a waiting tick.
+    case "trello_tick": {
+      const item = String(b.item ?? "").trim(), card = String(b.card ?? "").trim();
+      must(item, "Немає задачі");
+      const action = b.done ? "check" : "uncheck";
+      const { data: open } = await db.from("as_trello_queue").select("id,action").is("done_at", null).eq("item", item).eq("card", card);
+      const opposite = (open ?? []).filter((q) => q.action !== action && q.action !== "add");
+      if (opposite.length) await db.from("as_trello_queue").delete().in("id", opposite.map((q) => q.id));
+      else if (!(open ?? []).some((q) => q.action === action)) await db.from("as_trello_queue").insert({ action, card, item });
+      return await overview(tgId);
+    }
+
     case "push_file_delete":
       await db.from("as_push_files").delete().eq("id", Number(b.id));
       return await overview(tgId);
