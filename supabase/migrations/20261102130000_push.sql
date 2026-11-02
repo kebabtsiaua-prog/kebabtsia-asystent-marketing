@@ -39,3 +39,7 @@ create table if not exists as_push_files (
 create index if not exists as_push_files_num on as_push_files (push_num);
 alter table as_push_files enable row level security;
 grant select, insert, update, delete on as_push_files to service_role;
+-- Where the push sits in the sheet, and whether the app changed it and the sheet still has to be told.
+alter table as_push add column if not exists sheet_row int;
+alter table as_push add column if not exists dirty boolean not null default false;
+alter table as_push add column if not exists notes text not null default '';

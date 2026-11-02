@@ -618,6 +618,7 @@ screens.push = function () {
     main = '<section class="card" aria-label="Наступний пуш"><div class="btns" style="gap:8px"><span class="pill ' + st[2] + '">' + (late ? "−" + ago(now - d) : st[1]) + '</span><span class="muted small" style="font-weight:700">№' + p.num + " · " + wd(d) + " " + dm(d) + " о " + hm(d) + "</span></div>" +
       '<h2 style="font:600 22px/1.3 var(--head);margin:12px 0 0">' + esc(p.segment) + "</h2>" +
       '<div class="grid2"><div>' + (p.why ? '<div class="flabel">Чому цей сегмент</div><div class="fval">' + esc(p.why) + "</div>" : "") +
+      (p.notes ? '<div class="flabel">Нотатки з таблиці</div><div class="fval" style="font-size:14px">' + esc(p.notes) + "</div>" : "") +
       (steps.length ? '<div class="flabel">Звідки список</div><ol class="steps">' + steps.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") + "</ol>" : "") + "</div><div>" +
       '<div class="flabel">Заклади</div><div class="fval">' + esc(p.places || "—") + "</div>" +
       '<div class="flabel">Новина · бонус</div><div class="fval">' + esc(p.news || "—") + " · " + esc(p.bonus || "—") + "</div>" +
@@ -632,7 +633,9 @@ screens.push = function () {
   var plan = '<section class="card" aria-label="Далі за планом"><div class="chead"><h2 class="h2">Далі за планом</h2><span class="muted small" style="font-weight:600">' + later.length + "</span></div>" + (later.length ? later.map(function (x) { return pushRow(x, { date: 1 }); }).join("") : '<div class="empty">Більше пушів у плані немає.</div>') + "</section>";
   var sent = pushes().filter(function (x) { return x.status === "sent"; }).sort(byDue);
   var hist = '<section class="card" aria-label="Надіслані"><div class="chead"><h2 class="h2">Надіслані</h2><span class="muted small" style="font-weight:600">' + sent.length + "</span></div>" + (sent.length ? sent.slice(-6).reverse().map(function (x) { return pushRow(x, { date: 1 }); }).join("") : '<div class="empty">Ще нічого не надіслано.</div>') + "</section>";
-  return '<div class="cols"><div class="colL">' + main + plan + hist + '</div><div class="colR">' + checksCard() + analyticsCard() + filesCard() + "</div></div>";
+  var sa = state.push.sheet_at;
+  var foot = '<div class="foot">' + (sa ? "Таблиця пушів звірена о " + hm(new Date(sa)) + (dayKey(new Date(sa)) !== dayKey(new Date()) ? " " + dm(new Date(sa)) : "") + " · звіряю кожні 10 хвилин, «Надіслав» і перенесення пишу в таблицю одразу" : "План переносить Claude з таблиці пушів") + "</div>";
+  return '<div class="cols"><div class="colL">' + main + plan + hist + '</div><div class="colR">' + checksCard() + analyticsCard() + filesCard() + "</div></div>" + foot;
 };
 function checksCard() {
   var list = pushes().filter(function (p) { return p.check_on && p.status === "sent"; }).sort(function (a, b) { return a.check_on < b.check_on ? -1 : 1; });

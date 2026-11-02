@@ -6,7 +6,8 @@ import { openReminders, type Reminder, reminderLine, scheduleNext } from "../_sh
 import { send, sendDocument, tg, tgFile, token, webhookSecret } from "../_shared/telegram.ts";
 import { FALLBACK_PROMPT } from "./prompt.ts";
 import { DAYS, fmt, fromKyiv, kyiv, kyivDay, parseWhen, two } from "../_shared/time.ts";
-import { dueNag, markSent, movePush, nextDay, type Push } from "../_shared/push.ts";
+import { dueNag, markSent, movePush, nextDay, pullSheet, type Push } from "../_shared/push.ts";
+import { serviceAccount } from "../_shared/sheets.ts";
 import { type Trello, trelloSummary } from "../_shared/trello.ts";
 import { vidgukySummary } from "../_shared/vidguky.ts";
 
@@ -422,7 +423,7 @@ async function tick() {
     nagged++;
   }
 
-  return { ok: true, sent, nagged, missed, pushes: await pushNags(now), files: await outbox(now), digest: await morning() };
+  return { ok: true, sent, nagged, missed, sheet: await sheetTick(now), pushes: await pushNags(now), files: await outbox(now), digest: await morning() };
 }
 
 // Pushes from the plan: reminders keep coming (evening before, an hour before, then after the time) until «Надіслав».
@@ -430,6 +431,21 @@ const pushButtons = (num: number) => [
   [{ text: "✓ Надіслав", callback_data: `pd:${num}` }, { text: "На завтра", callback_data: `pm:${num}` }],
   [{ text: "Відкрити в апці", web_app: { url: `${APP_URL}#push` } }],
 ];
+// Every 10 minutes the push plan sheet is read again, so a change there shows up in the app and the reminders.
+async function sheetTick(now: number) {
+  const last = Number(await kvGet<number>("push_sheet_try")) || 0;
+  if (now - last < 10 * 60_000) return "not now";
+  await kvSet("push_sheet_try", now);
+  try {
+    const r = await pullSheet();
+    if (r.ok) await kvSet("push_sheet_pulled", now);
+    return r;
+  } catch (e) {
+    console.error("push sheet", e);
+    return { ok: false, reason: String(e) };
+  }
+}
+
 async function pushNags(now: number): Promise<number> {
   const { data } = await db.from("as_push").select("*").eq("status", "plan")
     .gte("due_at", new Date(now - 4 * 24 * HOUR).toISOString()).lte("due_at", new Date(now + 2 * 24 * HOUR).toISOString());
@@ -512,7 +528,9 @@ async function setup() {
   ] });
   await tg("setChatMenuButton", { menu_button: { type: "web_app", text: "Апка", web_app: { url: APP_URL } } });
   const me = await tg("getMe", {});
-  return Response.json({ ok: !!hook.ok, bot: me.result?.username ?? null, webhook: hook.description ?? null });
+  // The email to share the push plan sheet with (not a secret: it is only an address).
+  const sheets = serviceAccount()?.client_email ?? "немає GOOGLE_SERVICE_ACCOUNT";
+  return Response.json({ ok: !!hook.ok, bot: me.result?.username ?? null, webhook: hook.description ?? null, sheets });
 }
 
 Deno.serve(async (req) => {

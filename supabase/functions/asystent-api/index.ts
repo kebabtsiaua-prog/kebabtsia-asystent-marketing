@@ -35,6 +35,7 @@ async function overview(tgId: number) {
   const { data: me } = await db.from("as_people").select("name").eq("tg_id", tgId).maybeSingle();
   const { data: tasks } = await db.from("as_kv").select("value,updated_at").eq("key", "tasks").maybeSingle();
   const { data: trello } = await db.from("as_kv").select("value,updated_at").eq("key", "trello").maybeSingle();
+  const { data: sheetPulled } = await db.from("as_kv").select("updated_at").eq("key", "push_sheet_pulled").maybeSingle();
   const { data: pushStats } = await db.from("as_kv").select("value").eq("key", "push_stats").maybeSingle();
   const { data: files } = await db.from("as_push_files").select("id,push_num,kind,file_name,n,created_at").order("created_at", { ascending: false }).limit(60);
   const { data: reports } = await db.from("as_outbox").select("id,file_name,caption,send_after,sent_at").eq("tg_id", tgId)
@@ -52,7 +53,7 @@ async function overview(tgId: number) {
     tasks: tasks ? { text: tasks.value as string, updated_at: tasks.updated_at } : null,
     trello: trello ? { ...(trello.value as object), updated_at: trello.updated_at } : null,
     reports: reports ?? [],
-    push: { list: await pushList(), files: files ?? [], stats: pushStats?.value ?? null },
+    push: { list: await pushList(), files: files ?? [], stats: pushStats?.value ?? null, sheet_at: sheetPulled?.updated_at ?? null },
   };
 }
 
