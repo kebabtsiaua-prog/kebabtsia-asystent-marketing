@@ -295,6 +295,7 @@ function plural(n, a, b, c) { var m = n % 10, h = n % 100; return n + " " + (m =
 function thousands(n) { return n == null ? "—" : String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
 function ago(ms) { var m = Math.round(ms / 6e4); if (m < 60) return plural(m, "хвилину", "хвилини", "хвилин"); var h = Math.floor(m / 60), r = m % 60; return h + " год" + (r ? " " + r + " хв" : ""); }
 var ICON = {
+  meetings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1"/><circle cx="10" cy="8" r="3.5"/><path d="M21 20v-1a4 4 0 0 0-3-3.87M16 4.13a3.5 3.5 0 0 1 0 6.75"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>',
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
   tasks: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>',
@@ -351,6 +352,11 @@ function demoData() {
     },
     reports: [{ id: 1, file_name: "Звіт за тиждень.pdf", caption: "", send_after: new Date(now - 24 * h).toISOString(), sent_at: new Date(now - 24 * h).toISOString() }],
     memory: [{ topic: "Приклад теми", fact: "Тут буде факт із твоєї памʼяті." }],
+    inbox: [{ id: 2, kind: "note", project: "3", text: "Партнер надіслав площини для реклами. Що далі?", answer: "Записав у проєкт: наступний крок — погодити макети до пʼятниці.", created_at: at(-1, 15), done_at: at(-1, 17) }],
+    meetings: { updated_at: at(0, 8), meetings: [
+      { name: dm(new Date(now - 3 * 864e5)) + ".2026", date: day(-3), total: 4, done: 1, items: [{ name: "Знайти спеціаліста по Threads", done: false }, { name: "Список мерчу", done: false }, { name: "Графік нарад: середа з 13:30", done: true }, { name: "Ідеї новорічних зйомок", done: false }] },
+      { name: dm(new Date(now - 10 * 864e5)) + ".2026", date: day(-10), total: 5, done: 3, items: [{ name: "Почати роботу з YouTube", done: false }, { name: "Промокод для сайту і закладів", done: false }, { name: "Нагадати про себе всім партнерам", done: true }, { name: "Зйомка з командою", done: true }, { name: "Оновити тейбл-тенти", done: true }] },
+      { name: dm(new Date(now - 17 * 864e5)) + ".2026", date: day(-17), total: 3, done: 3, items: [] }] },
     push: {
       stats: { second: 51, target: 56, check: day(11) },
       files: [{ id: 1, push_num: 4, kind: "sent", file_name: "Список групи D.xlsx", n: 2140, created_at: at(-6, 19) }],
@@ -397,6 +403,8 @@ function demoCall(action, a) {
   if (action === "push_move" && p) { p.due_at = new Date(a.date + "T" + a.time + ":00+02:00").toISOString(); p.status = "plan"; }
   if (action === "push_file") window.lastRows = a.rows;
   if (action === "push_file") s.push.files.unshift({ id: Date.now(), push_num: a.num ? Number(a.num) : null, kind: a.kind, file_name: a.name, n: a.rows.length, created_at: new Date().toISOString() });
+  if (action === "inbox_add") s.inbox.unshift({ id: Date.now(), kind: a.kind, project: a.project || "", text: a.text, created_at: new Date().toISOString(), done_at: null, answer: null });
+  if (action === "inbox_delete") s.inbox = s.inbox.filter(function (x) { return x.id !== a.id; });
   if (action === "push_file_delete") s.push.files = s.push.files.filter(function (f) { return f.id !== Number(a.id); });
   if (action === "push_compare") return { n: 2140, back: 182, pct: 8.5, groups: { "231": { n: 120, back: 14 }, "232": { n: 760, back: 71 }, "233": { n: 1260, back: 97 } } };
   if ((action === "done" || action === "cancel") && a.id) {
@@ -469,6 +477,22 @@ function projectRows() {
 }
 // A direction for a Trello line, guessed from its words, so the tails can be filtered.
 var DIRS = [["Пуш і апка", /пуш|додат|апк|uployal|rfm|бонус|купон/i], ["Блогери і SMM", /блогер|інста|сторі|smm|рилс|тикток|контент/i], ["Франшизи", /франш/i], ["Команда", /нарад|команд|директ|діректи|юля|роман|діма|бухгалт/i], ["Партнери", /спорт|зал|тренер|bolt|glovo|колаб|партнер|спонсор/i], ["Офлайн", /промоут|точк|вітрин|друк|банер|фото/i]];
+var MEET = "НАРАДА МАРКЕТИНГ";
+function meetList() { return state.meetings && state.meetings.meetings ? state.meetings.meetings : []; }
+function meetCard(m) { return MEET + " / " + m.name; }
+function meetOpen() {
+  var out = [];
+  meetList().forEach(function (m, mi) { (m.items || []).forEach(function (it, ii) { if (!isDone(meetCard(m), it)) out.push({ m: m, mi: mi, ii: ii, it: it }); }); });
+  return out;
+}
+function inboxFor(n) { return (state.inbox || []).filter(function (x) { return x.kind === "note" && x.project === n; }); }
+function inboxNew() { return (state.inbox || []).filter(function (x) { return x.kind === "project"; }); }
+function inboxRow(x) {
+  var when = dm(new Date(x.created_at)) + " о " + hm(new Date(x.created_at));
+  return '<div class="box"><small>' + (x.done_at ? "Ти · " + when : "Ти · " + when + " · Claude прочитає при синхронізації") + "</small>" + esc(x.text) +
+    (x.answer ? '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)"><small>Claude</small>' + esc(x.answer) + "</div>" : "") +
+    (!x.done_at ? '<div style="margin-top:6px"><button type="button" class="link" data-delinbox="' + x.id + '">Забрати</button></div>' : "") + "</div>";
+}
 function dirOf(name) { for (var i = 0; i < DIRS.length; i++) if (DIRS[i][1].test(name)) return DIRS[i][0]; return "Інше"; }
 function trello() { return state.trello || { today: null, tails: [], main: [], week: null }; }
 // A tick made in the app waits in the queue until the next Trello sync writes it to the board.
@@ -588,7 +612,12 @@ screens.home = function () {
       '<div class="bar" style="height:12px">' + groups.map(function (g, i) { return '<i style="flex:' + g.items.length + ";background:" + COL[Math.min(i, COL.length - 1)] + '"></i>'; }).join("") + "</div>" +
       '<div class="sub" style="justify-content:space-between;margin-top:10px">' + groups.map(function (g) { return "<span>" + dm(new Date(g.since + "T12:00:00Z")) + " · " + g.items.length + "</span>"; }).join("") + "</div>"
       : '<div class="empty">Хвостів немає. Так тримати.</div>') + "</section>";
-  return '<div class="cols"><div class="colL">' + focusCard() + tasks + reminders + '</div><div class="colR">' + pushCard + waitCard + tailCard + "</div></div>";
+  var mo = meetOpen(), lastM = meetList()[0];
+  var meetCardH = '<section class="card" aria-label="Наради"><div class="chead"><h2 class="h2">З нарад</h2><button class="link" type="button" data-go="meetings">Усі →</button></div>' +
+    (mo.length ? '<div class="stat" style="margin:4px 0 8px"><span class="num">' + mo.length + '</span><span class="muted small" style="font-weight:600">не закрито' + (lastM ? ", остання нарада " + esc(lastM.name) : "") + "</span></div>" +
+      mo.slice(0, 3).map(function (o) { return '<div class="row">' + tick("meet:" + o.mi + ":" + o.ii, meetCard(o.m), o.it) + '<span class="body"><span class="t">' + esc(o.it.name) + '</span><span class="sub">нарада ' + esc(o.m.name) + "</span></span></div>"; }).join("")
+      : '<div class="empty">Усі пункти з нарад закриті.</div>') + "</section>";
+  return '<div class="cols"><div class="colL">' + focusCard() + tasks + reminders + '</div><div class="colR">' + pushCard + waitCard + meetCardH + tailCard + "</div></div>";
 };
 
 screens.tasks = function () {
@@ -680,7 +709,7 @@ function filesCard() {
 
 screens.projects = function () {
   var rows = projectRows();
-  if (!rows.length) return '<section class="card"><div class="empty"><b>Список проєктів ще не підтягнуто</b></div></section>';
+  if (!rows.length) return '<section class="card"><div class="empty"><b>Список проєктів ще не підтягнуто</b></div><button class="btn b-lime" type="button" data-sheet="newproj">+ Додати проєкт</button></section>';
   var html = STATUS.map(function (s) {
     var list = rows.filter(function (r) { return r.st[1] === s[1]; });
     if (!list.length) return "";
@@ -688,7 +717,29 @@ screens.projects = function () {
       return '<button type="button" class="row" data-proj="' + esc(r.n) + '">' + (s[1] === "wait" ? '<span class="dotA"></span>' : "") + '<span class="body"><span class="t">' + esc(r.name) + '</span><span class="sub">' + esc(r.next ? "Далі: " + r.next : r.done) + "</span></span>" + '<span class="pill ' + s[3] + '">' + s[2].toLowerCase() + "</span></button>";
     }).join("");
   }).join("");
-  return '<section class="card">' + html + '</section><div class="foot">Список веде Claude у проєкті · оновлено ' + dm(new Date(state.tasks.updated_at)) + "</div>";
+  var nw = inboxNew();
+  var add = '<section class="card"><div class="chead"><h2 class="h2">Нові проєкти</h2><button class="btn b-lime" type="button" data-sheet="newproj">+ Додати проєкт</button></div>' +
+    (nw.length ? nw.map(inboxRow).join("") : '<div class="empty">Додай задачу, і Claude внесе її в список при синхронізації.</div>') + "</section>";
+  return '<div class="wrap" style="gap:16px"><section class="card">' + html + "</section>" + add + '<div class="foot">Список веде Claude у проєкті · оновлено ' + dm(new Date(state.tasks.updated_at)) + "</div></div>";
+};
+
+screens.meetings = function () {
+  var list = meetList();
+  if (!list.length) return '<section class="card"><div class="empty"><b>Наради ще не підтягнуто</b>Підтягну картку «НАРАДА МАРКЕТИНГ» при найближчій синхронізації.</div></section>';
+  var open = meetOpen(), withOpen = list.filter(function (m) { return (m.items || []).some(function (it) { return !isDone(meetCard(m), it); }); });
+  var oldest = open.length ? open.reduce(function (a, o) { return o.m.date && (!a || o.m.date < a) ? o.m.date : a; }, "") : "";
+  var head = '<section class="card"><div class="stat"><span class="num">' + open.length + '</span><span class="muted small" style="font-weight:600">' + (open.length === 1 ? "пункт" : "пунктів") + " з нарад не закрито" + (oldest ? ", найстаршому " + plural(daysSince(oldest), "день", "дні", "днів") : "") + "</span></div>" +
+    '<div class="sub" style="margin-top:8px">' + plural(withOpen.length, "нарада", "наради", "нарад") + " з відкритими пунктами з " + list.length + ". Галочка тут іде в Trello при синхронізації.</div></section>";
+  var cards = withOpen.map(function (m) {
+    var mi = list.indexOf(m), its = m.items || [], left = its.filter(function (it) { return !isDone(meetCard(m), it); }).length;
+    var done = m.total - left, pct = m.total ? Math.round(done * 100 / m.total) : 0;
+    return '<section class="card"><div class="chead"><h2 class="h2">' + esc(m.date ? wd(new Date(m.date + "T12:00:00Z")) + " " + dm(new Date(m.date + "T12:00:00Z")) : m.name) + '</h2><span class="muted small" style="font-weight:600">закрито ' + done + " з " + m.total + "</span></div>" +
+      '<div class="bar" style="height:6px;margin:4px 0 12px"><i style="flex:' + pct + ';background:var(--accent)"></i><i style="flex:' + (100 - pct) + ';background:var(--line)"></i></div>' +
+      its.map(function (it, ii) { var on = isDone(meetCard(m), it); return '<div class="row' + (on ? " done" : "") + '">' + tick("meet:" + mi + ":" + ii, meetCard(m), it) + '<span class="body"><span class="t">' + esc(it.name) + '</span><span class="sub"><span class="tag">' + esc(dirOf(it.name)) + "</span>" + waitTag(meetCard(m), it.name) + "</span></span></div>"; }).join("") + "</section>";
+  }).join("");
+  var closed = list.filter(function (m) { return withOpen.indexOf(m) < 0; });
+  var arch = closed.length ? '<section class="card"><div class="chead"><h2 class="h2">Закриті повністю</h2><span class="muted small" style="font-weight:600">' + closed.length + "</span></div>" + closed.map(function (m) { return '<div class="row"><span class="body"><span class="t">' + esc(m.name) + '</span><span class="sub">' + m.total + " з " + m.total + "</span></span></div>"; }).join("") + "</section>" : "";
+  return '<div class="wrap" style="gap:16px">' + head + cards + arch + '<div class="foot">Джерело: Trello, картка «НАРАДА МАРКЕТИНГ» · оновлено ' + dm(new Date(state.meetings.updated_at)) + "</div></div>";
 };
 
 screens.vidguky = function () {
@@ -739,11 +790,11 @@ screens.history = function () {
 };
 
 // ---------- Navigation ----------
-var NAV = [["home", "Головна"], ["tasks", "Задачі"], ["push", "Пуш RFM"], ["projects", "Проєкти"], ["vidguky", "Відгуки"], ["reports", "Звіти"], ["memory", "Памʼять"], ["history", "Історія"]];
+var NAV = [["home", "Головна"], ["tasks", "Задачі"], ["push", "Пуш RFM"], ["projects", "Проєкти"], ["meetings", "Наради"], ["vidguky", "Відгуки"], ["reports", "Звіти"], ["memory", "Памʼять"], ["history", "Історія"]];
 var TABS = [["home", "Головна"], ["tasks", "Задачі"], ["push", "Пуш"], ["projects", "Проєкти"], ["more", "Ще"]];
 function badges() {
   var t = trello(), wait = projectRows().filter(function (r) { return r.st[1] === "wait"; }).length;
-  return { tasks: [todayItems().filter(function (i) { return !isDone(todayCard(), i); }).length, ""], push: [overduePushes().length, "red"], projects: [wait, ""], vidguky: [vid && vid.complaints ? vid.complaints.open : 0, "red"] };
+  return { tasks: [todayItems().filter(function (i) { return !isDone(todayCard(), i); }).length, ""], push: [overduePushes().length, "red"], projects: [wait, ""], meetings: [meetOpen().length, ""], vidguky: [vid && vid.complaints ? vid.complaints.open : 0, "red"] };
 }
 function navs() {
   var b = badges();
@@ -751,7 +802,7 @@ function navs() {
     var x = b[n[0]];
     return (n[0] === "memory" ? '<div class="nsep"></div>' : "") + '<button type="button" class="nav' + (current === n[0] ? " on" : "") + '" data-go="' + n[0] + '"' + (current === n[0] ? ' aria-current="page"' : "") + ">" + ICON[n[0]] + n[1] + (x && x[0] ? '<span class="badge ' + x[1] + '">' + x[0] + "</span>" : "") + "</button>";
   }).join("");
-  var inMore = ["vidguky", "reports", "memory", "history"].indexOf(current) >= 0;
+  var inMore = ["meetings", "vidguky", "reports", "memory", "history"].indexOf(current) >= 0;
   $("tabbar").innerHTML = TABS.map(function (n) {
     var on = current === n[0] || (n[0] === "more" && inMore), x = b[n[0]];
     return '<button type="button" class="' + (on ? "on" : "") + '" ' + (n[0] === "more" ? 'data-sheet="more"' : 'data-go="' + n[0] + '"') + ">" + (x && x[0] && x[1] === "red" ? '<span class="tb">' + x[0] + "</span>" : "") + ICON[n[0]] + n[1] + "</button>";
@@ -769,6 +820,7 @@ function title(name) {
   }
   if (name === "tasks") { var t = trello(), ot = t.tails.filter(function (x) { return !isDone(x.card, x); }).length; return ["Trello · «Мої задачі Кебабця»", ot ? plural(ot, "хвіст", "хвости", "хвостів") + " і " + plural(todayItems().filter(function (i) { return !isDone(todayCard(), i); }).length, "задача", "задачі", "задач") + " на сьогодні" : "Задачі"]; }
   if (name === "projects") { var w = projectRows().filter(function (r) { return r.st[1] === "wait"; }).length; return ["Проєкти з Claude", w ? plural(w, "проєкт чекає", "проєкти чекають", "проєктів чекають") + " тебе" : "Проєкти"]; }
+  if (name === "meetings") { var mo = meetOpen().length; return ["Trello · картка «НАРАДА МАРКЕТИНГ»", mo ? plural(mo, "пункт з нарад відкритий", "пункти з нарад відкриті", "пунктів з нарад відкрито") : "Наради"]; }
   return [longDate(now), { vidguky: "Відгуки", reports: "Звіти", memory: "Памʼять", history: "Історія нагадувань" }[name]];
 }
 function show(name, keep) {
@@ -868,8 +920,13 @@ function projSheet(n) {
   var r = projectRows().filter(function (x) { return x.n === n; })[0]; if (!r) return;
   sheet("<h3>" + esc(r.name) + '</h3><div class="ctx"><span class="pill ' + r.st[3] + '">' + r.st[2].toLowerCase() + "</span> · проєкт у Claude</div>" +
     (r.done ? '<div class="box"><small>Зроблено</small>' + esc(r.done) + "</div>" : "") + (r.next ? '<div class="box"><small>Далі</small>' + esc(r.next) + "</div>" : "") +
-    '<div class="btns"><button type="button" class="btn b-lime" data-remind="today" data-text="' + esc(r.name) + '">Нагадати о 18:00</button><button type="button" class="btn b-line" data-remind="tomorrow" data-text="' + esc(r.name) + '">Завтра о 10:00</button></div>' +
-    '<div class="foot" style="text-align:left">Відкрити, написати й додати проєкт прямо звідси буде в Етапі 3.</div>');
+    inboxFor(r.n).slice().reverse().map(inboxRow).join("") +
+    '<form id="noteForm" data-proj="' + esc(r.n) + '" style="display:flex;flex-direction:column;gap:10px"><label for="nText">Написати Claude<textarea id="nText" placeholder="Напр.: Bolt відповів, площини OOH надіслали. Що далі?"></textarea></label><button class="btn b-lime b-wide" type="submit">Надіслати</button></form>' +
+    '<div class="btns"><button type="button" class="btn b-line" data-remind="today" data-text="' + esc(r.name) + '">Нагадати о 18:00</button><button type="button" class="btn b-line" data-remind="tomorrow" data-text="' + esc(r.name) + '">Завтра о 10:00</button></div>' +
+    '<div class="foot" style="text-align:left">Claude читає повідомлення при синхронізації (7:52, 13:52, 17:52): оновлює статус у списку й відповідає тут. Велику роботу (документ, таблицю) роблю в чаті проєкту.</div>');
+}
+function newProjSheet() {
+  sheet('<h3>Новий проєкт</h3><div class="ctx">Claude внесе його в список при синхронізації і відповість тут, що робить першим кроком.</div><form id="projForm" style="display:flex;flex-direction:column;gap:14px"><label for="pName">Назва<input id="pName" placeholder="Напр.: Новорічні зйомки"></label><label for="pText">Що треба зробити і до коли<textarea id="pText" placeholder="Ідеї, бюджет, хто знімає, дедлайн 15.12"></textarea></label><button class="btn b-lime b-wide" type="submit">Додати</button></form>');
 }
 function taskSheet(key) {
   var k = key.split(":"), t = trello(), item = k[0] === "today" ? todayItems()[+k[1]] : k[0] === "tails" ? t.tails[+k[1]] : t.main[+k[1]];
@@ -888,7 +945,7 @@ function remSheet(id) {
     '<div class="btns"><button class="btn b-lime" type="button" data-act="done" data-id="' + id + '">' + ICON.check + 'Зроблено</button><button class="btn b-line" type="button" data-act="snooze" data-to="hour" data-id="' + id + '">+1 година</button><button class="btn b-line" type="button" data-act="snooze" data-to="tomorrow" data-id="' + id + '">Завтра</button></div>');
 }
 function moreSheet() {
-  sheet('<h3>Ще</h3><div>' + [["vidguky", "Відгуки", "скарги й оцінки по точках"], ["reports", "Звіти", "тиждень і PDF"], ["memory", "Памʼять", plural(state.memory.length, "факт", "факти", "фактів")], ["history", "Історія нагадувань", "зроблено " + state.month.done + ", пропущено " + state.month.missed + " цього місяця"]].map(function (x, i) {
+  sheet('<h3>Ще</h3><div>' + [["meetings", "Наради", plural(meetOpen().length, "відкритий пункт", "відкриті пункти", "відкритих пунктів")], ["vidguky", "Відгуки", "скарги й оцінки по точках"], ["reports", "Звіти", "тиждень і PDF"], ["memory", "Памʼять", plural(state.memory.length, "факт", "факти", "фактів")], ["history", "Історія нагадувань", "зроблено " + state.month.done + ", пропущено " + state.month.missed + " цього місяця"]].map(function (x, i) {
     return '<button type="button" class="row' + (i ? "" : " first") + '" data-go="' + x[0] + '">' + ICON[x[0]].replace("<svg", '<svg width="22" height="22"') + '<span class="body"><span class="t">' + x[1] + '</span><span class="sub">' + esc(x[2]) + "</span></span></button>";
   }).join("") + '</div><button class="btn b-lime b-wide" type="button" data-sheet="add">+ Нове нагадування</button>');
 }
@@ -948,9 +1005,10 @@ function readFile(file) {
 
 // ---------- Clicks ----------
 function toggleTick(key) {
-  var k = key.split(":"), t = trello(), item = k[0] === "today" ? todayItems()[+k[1]] : t.tails[+k[1]];
+  var k = key.split(":"), t = trello(), mt = k[0] === "meet" ? meetList()[+k[1]] : null;
+  var item = mt ? (mt.items || [])[+k[2]] : k[0] === "today" ? todayItems()[+k[1]] : t.tails[+k[1]];
   if (!item) return;
-  var card = k[0] === "today" ? todayCard() : item.card || "", done = !isDone(card, item);
+  var card = mt ? meetCard(mt) : k[0] === "today" ? todayCard() : item.card || "", done = !isDone(card, item);
   closeSheet();
   if (DEMO) {
     state.trello_queue = (state.trello_queue || []).filter(function (x) { return !(x.item === item.name && x.card === card); });
@@ -979,6 +1037,8 @@ document.addEventListener("click", function (ev) {
   if (ds.sheet === "add") { addSheet(); return; }
   if (ds.sheet === "plan") { planSheet(); return; }
   if (ds.sheet === "more") { moreSheet(); return; }
+  if (ds.sheet === "newproj") { newProjSheet(); return; }
+  if (ds.delinbox) { run("inbox_delete", { id: Number(ds.delinbox) }).then(function () { closeSheet(); toast("Забрав"); }).catch(function () {}); return; }
   if (ds.sheet === "upload") { var last = pushes().filter(function (x) { return x.status === "sent"; }).sort(byDue).pop(); uploadSheet(Number(ds.num) || (last || nextPush() || {}).num); return; }
   if (ds.push) { pushSheet(Number(ds.push)); return; }
   if (ds.copy) { copyPush(Number(ds.copy)); return; }
@@ -1039,6 +1099,14 @@ document.addEventListener("submit", function (e) {
   if (f.id === "addForm") {
     run("add", { text: $("aText").value, date: $("aDate").value, time: $("aTime").value, repeat: $("aRepeat").value }).then(function () { closeSheet(); haptic("success"); toast("Поставив нагадування на " + $("aTime").value); }).catch(function () {});
   }
+  if (f.id === "noteForm") {
+    var nt = $("nText").value.trim(); if (!nt) return;
+    run("inbox_add", { kind: "note", project: f.dataset.proj, text: nt }).then(function () { closeSheet(); haptic("success"); toast("Передав Claude. Відповідь буде тут після синхронізації"); }).catch(function () {});
+  }
+  if (f.id === "projForm") {
+    var pn = $("pName").value.trim(), pt = $("pText").value.trim(); if (!pn) { $("pName").focus(); return; }
+    run("inbox_add", { kind: "project", text: pn + (pt ? ": " + pt : "") }).then(function () { closeSheet(); haptic("success"); toast("Додано. Claude внесе в список при синхронізації"); }).catch(function () {});
+  }
   if (f.id === "memForm") run("memory_save", { topic: $("mTopic").value, fact: $("mFact").value, old: $("mOld").value }).then(function () { closeSheet(); toast("Збережено"); }).catch(function () {});
   if (f.id === "sentForm") {
     var num = Number(f.dataset.num), count = $("sentCount").value.trim();
@@ -1065,7 +1133,7 @@ document.addEventListener("keydown", function (e) { var tk = e.target.closest &&
 document.addEventListener("change", function (e) { if (e.target.id === "aRepeat") $("aDate").disabled = !!e.target.value; });
 
 $("demo").hidden = !DEMO;
-var START = { push: 1, tasks: 1, projects: 1, vidguky: 1, reports: 1 }[location.hash.slice(1)] ? location.hash.slice(1) : "home";
+var START = { push: 1, tasks: 1, projects: 1, meetings: 1, vidguky: 1, reports: 1 }[location.hash.slice(1)] ? location.hash.slice(1) : "home";
 current = START;
 window.addEventListener("hashchange", function () { var h = location.hash.slice(1); if (screens[h] && state) { closeSheet(); show(h); } });
 run("overview").catch(function () { $("screen").innerHTML = ""; });

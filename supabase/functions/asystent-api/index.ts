@@ -39,6 +39,9 @@ async function overview(tgId: number) {
   const { data: queue } = await db.from("as_trello_queue").select("id,action,card,item,created_at").is("done_at", null).order("id");
   const { data: pushStats } = await db.from("as_kv").select("value").eq("key", "push_stats").maybeSingle();
   const { data: files } = await db.from("as_push_files").select("id,push_num,kind,file_name,n,created_at").order("created_at", { ascending: false }).limit(60);
+  const { data: meetings } = await db.from("as_kv").select("value,updated_at").eq("key", "meetings").maybeSingle();
+  const { data: inbox } = await db.from("as_inbox").select("id,kind,project,text,answer,created_at,done_at").eq("tg_id", tgId)
+    .order("id", { ascending: false }).limit(40);
   const { data: reports } = await db.from("as_outbox").select("id,file_name,caption,send_after,sent_at").eq("tg_id", tgId)
     .order("send_after", { ascending: false }).limit(8);
   return {
@@ -55,6 +58,8 @@ async function overview(tgId: number) {
     trello: trello ? { ...(trello.value as object), updated_at: trello.updated_at } : null,
     reports: reports ?? [],
     trello_queue: queue ?? [],
+    meetings: meetings ? { ...(meetings.value as object), updated_at: meetings.updated_at } : null,
+    inbox: inbox ?? [],
     push: { list: await pushList(), files: files ?? [], stats: pushStats?.value ?? null, sheet_at: sheetPulled?.updated_at ?? null },
   };
 }
@@ -183,6 +188,18 @@ async function handle(tgId: number, b: any) {
       else if (!(open ?? []).some((q) => q.action === action)) await db.from("as_trello_queue").insert({ action, card, item });
       return await overview(tgId);
     }
+
+    // A message to Claude about a project, or a new project. Claude answers at the next sync.
+    case "inbox_add": {
+      const text = String(b.text ?? "").trim().slice(0, 2000);
+      must(text, "Напиши, що передати");
+      const kind = b.kind === "project" ? "project" : "note";
+      await db.from("as_inbox").insert({ tg_id: tgId, kind, project: String(b.project ?? "").slice(0, 20), text });
+      return await overview(tgId);
+    }
+    case "inbox_delete":
+      await db.from("as_inbox").delete().eq("id", Number(b.id)).eq("tg_id", tgId).is("done_at", null);
+      return await overview(tgId);
 
     case "push_file_delete":
       await db.from("as_push_files").delete().eq("id", Number(b.id));
