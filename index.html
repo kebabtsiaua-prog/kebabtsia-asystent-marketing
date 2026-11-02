@@ -12,7 +12,7 @@
 /* Design system: «лайм». Unbounded for screen titles and big numbers, Manrope for everything else.
    Type 40 / 28–32 / 17 / 15 / 13 on an 8 px grid. Status colours are fixed: red overdue, amber waits for you, lime done, grey plan. */
 :root{
-  --bg:#eef0ea;--card:#ffffff;--ink:#141613;--muted:#5f645b;--line:#e6e8e1;--soft:#f4f5f1;--box:#a9ada3;
+  --bg:#eef0ea;--card:#ffffff;--ink:#141613;--muted:#5f645b;--line:#e6e8e1;--soft:#f4f5f1;--box:#868b80;
   --accent:#c6f432;--on-accent:#141a05;--link:#3f5c00;
   --dark:#141613;--dark2:#232622;--dark-line:#33372f;--on-dark:#f3f5ee;--dark-muted:#a3a89c;
   --red:#e0483f;--red-bg:#fbe5e3;--red-ink:#a32b2b;
@@ -22,7 +22,7 @@
   --head:"Unbounded",system-ui,sans-serif;--body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 [data-theme=dark]{
-  --bg:#0e0f0d;--card:#1a1c19;--ink:#f1f3ec;--muted:#9a9f93;--line:#2a2d28;--soft:#222520;--box:#5c6157;
+  --bg:#0e0f0d;--card:#1a1c19;--ink:#f1f3ec;--muted:#9a9f93;--line:#2a2d28;--soft:#222520;--box:#7a8073;
   --link:#c6f432;--dark:#232622;--dark2:#2d312b;--dark-line:#3b4037;
   --red-bg:#3a1d1a;--red-ink:#ff9f97;--amb-bg:#3a2c14;--amb-ink:#f2c46d;--lime-bg:#2a3510;--lime-ink:#c6f432;--grey-bg:#262923;--grey-ink:#a3a89c;
   color-scheme:dark;
@@ -43,8 +43,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .eyebrow{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
 h1{font:600 24px/1.2 var(--head);margin:6px 0 0;letter-spacing:-.01em;text-wrap:balance}
 .upd{font-size:13px;color:var(--muted);font-weight:600}
-.close{border:0;background:var(--card);border-radius:12px;padding:0 14px;height:40px;font-weight:700;font-size:14px;white-space:nowrap}
-.back{border:0;background:var(--card);border-radius:12px;width:40px;height:40px;display:grid;place-items:center;flex:none}
+.close{border:0;background:var(--card);border-radius:12px;padding:0 14px;height:44px;font-weight:700;font-size:14px;white-space:nowrap}
+.back{border:0;background:var(--card);border-radius:12px;width:44px;height:44px;display:grid;place-items:center;flex:none}
 .note-demo{background:var(--amb-bg);color:var(--amb-ink);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:600}
 .err{background:var(--red-bg);color:var(--red-ink);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:600}
 .cols{display:flex;flex-direction:column;gap:16px}
@@ -62,7 +62,7 @@ h1{font:600 24px/1.2 var(--head);margin:6px 0 0;letter-spacing:-.01em;text-wrap:
 .h2{font-size:17px;font-weight:800;margin:0}
 .muted{color:var(--muted)}
 .small{font-size:13px}
-.link{border:0;background:none;padding:0;font-size:14px;font-weight:700;color:var(--link);text-decoration:none;margin-left:auto;white-space:nowrap}
+.link{border:0;background:none;padding:0 4px;margin-right:-4px;min-height:44px;display:inline-flex;align-items:center;font-size:14px;font-weight:700;color:var(--link);text-decoration:none;margin-left:auto;white-space:nowrap}
 .num{font:600 32px/1 var(--head);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .empty{color:var(--muted);padding:16px 0 4px;font-size:14px}
 .empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:2px}
@@ -116,7 +116,7 @@ button.row:hover,.rowbtn:hover{background:var(--soft)}
 .pushbox .pb{flex:1 1 220px;min-width:0}
 .pushbox b{display:block;font-size:15px}
 .pushbox span{display:block;font-size:14px;color:#c9cdc3;margin-top:4px;line-height:1.45}
-.copy{height:36px;padding:0 12px;border-radius:10px;border:1.5px solid #4a4e47;background:transparent;color:var(--on-dark);font:700 13px var(--body);flex:none}
+.copy{height:44px;padding:0 12px;border-radius:10px;border:1.5px solid #4a4e47;background:transparent;color:var(--on-dark);font:700 13px var(--body);flex:none}
 .focus .link{color:var(--accent)}
 .fnext{border-top:1px solid var(--dark-line);padding-top:14px;font-size:13.5px;color:var(--dark-muted)}
 
@@ -133,7 +133,7 @@ button.row:hover,.rowbtn:hover{background:var(--soft)}
 /* Tabs and chips */
 .seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px}
 .seg::-webkit-scrollbar{display:none}
-.seg button{border:0;background:var(--card);border-radius:999px;height:40px;padding:0 16px;font-weight:700;font-size:14px;white-space:nowrap;display:flex;gap:8px;align-items:center;flex:none}
+.seg button{border:0;background:var(--card);border-radius:999px;height:44px;padding:0 16px;font-weight:700;font-size:14px;white-space:nowrap;display:flex;gap:8px;align-items:center;flex:none}
 .seg button span{font-size:12px;background:var(--soft);border-radius:999px;padding:0 7px;min-width:22px;text-align:center}
 .seg button.on{background:var(--dark);color:var(--on-dark)}
 .seg button.on span{background:var(--accent);color:var(--on-accent)}
@@ -181,12 +181,37 @@ button.row:hover,.rowbtn:hover{background:var(--soft)}
 .sheet .box small{display:block;font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:var(--muted);min-width:0}
-input,select,textarea{font:600 16px var(--body);color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:0 14px;height:48px;width:100%}
+input,select,textarea{font:600 16px var(--body);color:var(--ink);background:var(--card);border:1.5px solid var(--box);border-radius:12px;padding:0 14px;height:48px;width:100%}
 textarea{height:auto;min-height:80px;padding:12px 14px;resize:vertical;font-weight:500}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));z-index:10;background:var(--ink);color:var(--card);border-radius:14px;padding:12px 14px 12px 16px;display:flex;gap:14px;align-items:center;font-size:14px;font-weight:600;width:max-content;max-width:calc(100% - 32px)}
-.toast button{border:0;background:transparent;color:var(--accent);font-weight:800;flex:none}
+.toast button{border:0;background:transparent;color:var(--accent);font-weight:800;flex:none;min-height:44px;padding:0 6px}
 [data-theme=dark] .toast{background:#f1f3ec;color:#141613}[data-theme=dark] .toast button{color:#3f5c00}
 @media (prefers-reduced-motion:no-preference){.sheet>div{animation:up .2s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.5}}}
+
+/* ---------- States and accessibility (design-system/MASTER.md) ---------- */
+.chk,.chip{position:relative}
+.chk::before{content:"";position:absolute;inset:-13px}
+.chip::after{content:"";position:absolute;left:0;right:0;top:-6px;bottom:-6px}
+.btn[disabled],button[aria-busy=true]{opacity:.6;cursor:progress}
+.err{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.err span{flex:1 1 200px}
+.err button{border:1.5px solid currentColor;background:transparent;color:inherit;border-radius:10px;min-height:44px;padding:0 14px;font-weight:800;flex:none}
+.warn{background:var(--amb-bg);color:var(--amb-ink);border-radius:12px;padding:10px 14px;font-size:13px;font-weight:600}
+.state{text-align:center;padding:32px 18px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.state b{font-size:17px}
+.state p{margin:0;color:var(--muted);font-size:14px;max-width:420px}
+.skel{display:flex;flex-direction:column;gap:16px}
+.skel i{display:block;border-radius:18px;background:var(--card)}
+.skel i:nth-child(1){height:168px;background:var(--dark)}
+.skel i:nth-child(2){height:220px}.skel i:nth-child(3){height:140px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion:no-preference){
+  button,.chk{transition:background-color .15s ease-out,color .15s ease-out,border-color .15s ease-out,transform .1s ease-out}
+  button:active:not([disabled]){transform:scale(.98)}
+  .skel i{animation:pulse 1.2s ease-in-out infinite alternate}
+  @keyframes pulse{to{opacity:.55}}
+  .toast{animation:tin .18s ease-out}@keyframes tin{from{opacity:0;transform:translate(-50%,8px)}}
+}
 
 /* Reviews */
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -244,13 +269,14 @@ textarea{height:auto;min-height:80px;padding:12px 14px;resize:vertical;font-weig
 <div class="main"><div class="wrap">
   <div class="top">
     <button class="back" id="back" type="button" aria-label="Назад" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-    <div class="tt"><div class="eyebrow" id="eyebrow"></div><h1 id="title">Завантажую…</h1></div>
+    <div class="tt"><div class="eyebrow" id="eyebrow"></div><h1 id="title">Кабінет</h1></div>
     <span class="upd" id="upd"></span>
     <button class="close" id="close" type="button" hidden>✕ Закрити</button>
   </div>
   <div id="demo" class="note-demo" hidden>Це приклад з вигаданими даними: апку відкрито не з Телеграма.</div>
+  <div id="offline" class="warn" role="status" hidden>Немає інтернету. Зміни не збережуться, поки зв'язок не повернеться.</div>
   <div id="err" class="err" role="alert" hidden></div>
-  <main id="screen"></main>
+  <main id="screen" aria-busy="true"><div class="skel" aria-hidden="true"><i></i><i></i><i></i></div><span class="vh">Завантажую кабінет…</span></main>
 </div></div>
 
 <nav class="tabbar" id="tabbar" aria-label="Розділи"></nav>
@@ -390,9 +416,18 @@ function demoVidguky() {
 function call(action, args) {
   if (DEMO) return Promise.resolve(demoCall(action, args || {}));
   var body = Object.assign({ action: action, initData: TG.initData }, args || {});
-  return fetch(API, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
-    .then(function (r) { return r.json(); })
-    .then(function (j) { if (j.error) throw new Error(j.error); return j; });
+  var ctl = window.AbortController ? new AbortController() : null, timer = ctl && setTimeout(function () { ctl.abort(); }, 20000);
+  return fetch(API, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined })
+    .then(function (r) { return r.json().catch(function () { throw new Error("Сервер відповів з помилкою (" + r.status + "). Спробуй ще раз за хвилину."); }); })
+    .then(function (j) { if (j.error) throw new Error(j.error); return j; })
+    .catch(function (e) { throw new Error(humanError(e)); })
+    .finally(function () { clearTimeout(timer); });
+}
+function humanError(e) {
+  if (!navigator.onLine) return "Немає інтернету. Перевір зв'язок і спробуй ще раз.";
+  if (e && e.name === "AbortError") return "Сервер не відповів за 20 секунд. Спробуй ще раз.";
+  if (e && e.name === "TypeError") return "Не вдалося зв'язатися з сервером. Спробуй ще раз.";
+  return (e && e.message) || "Щось пішло не так. Спробуй ще раз.";
 }
 // In the preview the buttons work on the example data, so every screen can be tried.
 function demoCall(action, a) {
@@ -415,10 +450,29 @@ function demoCall(action, a) {
   if (action === "add") s.open.push({ id: Date.now(), text: a.text, due_at: new Date(a.date + "T" + a.time + ":00+02:00").toISOString(), status: "pending", repeat: a.repeat || null });
   return s;
 }
+var READS = { overview: 1 }, lastRead = null;
 function run(action, args) {
   $("err").hidden = true;
-  return call(action, args).then(function (s) { state = s; show(current, true); return s; })
-    .catch(function (e) { $("err").textContent = e.message; $("err").hidden = false; haptic("error"); throw e; });
+  var dlg = $("layer").querySelector(".sheet"), old = dlg && dlg.querySelector(".err"); if (old) old.remove();
+  var sb = dlg && dlg.querySelector("form [type=submit]"), label = sb && sb.textContent;
+  if (sb) { sb.disabled = true; sb.setAttribute("aria-busy", "true"); sb.textContent = "Зберігаю…"; }
+  return call(action, args).then(function (s) { state = s; $("screen").removeAttribute("aria-busy"); show(current, true); return s; })
+    .catch(function (e) {
+      haptic("error");
+      lastRead = READS[action] ? [action, args] : null;
+      var inSheet = dlg && dlg.isConnected;
+      if (inSheet) {
+        // The banner sits behind the sheet, so the error goes inside it, next to the button that failed.
+        var box = document.createElement("div"); box.className = "err"; box.setAttribute("role", "alert");
+        box.innerHTML = "<span>" + esc(e.message) + " Нічого не збережено, можна натиснути ще раз.</span>";
+        if (sb && sb.isConnected) { sb.disabled = false; sb.removeAttribute("aria-busy"); sb.textContent = label; sb.parentNode.insertBefore(box, sb); }
+        else { var h = dlg.querySelector("h3"); if (h) h.after(box); else dlg.firstChild.prepend(box); }
+      } else {
+        $("err").innerHTML = "<span>" + esc(e.message) + "</span>" + (lastRead ? '<button type="button" data-retry>Спробувати ще раз</button>' : "");
+        $("err").hidden = false;
+      }
+      throw e;
+    });
 }
 function loadVidguky() {
   if (Date.now() - vLoaded < 60000) return;
@@ -744,7 +798,7 @@ screens.meetings = function () {
 
 screens.vidguky = function () {
   if (!vid) return '<section class="card"><div class="empty">Завантажую «Відгуки»…</div></section>';
-  if (vid.error) return '<div class="err">' + esc(vid.error) + "</div>";
+  if (vid.error) return '<div class="err" role="alert"><span>«Відгуки» не завантажились: ' + esc(vid.error) + '</span><button type="button" data-vretry>Спробувати ще раз</button></div>';
   var c = vid.complaints, a = vid.app, g = vid.google;
   var pts = vid.points.slice().sort(function (x, y) { return (y.complaintsOpen - x.complaintsOpen) || (y.complaintsWeek - x.complaintsWeek) || ((x.googleChange || 0) - (y.googleChange || 0)); });
   var alerts = (c ? c.openList : []).map(function (x) { return '<div class="row"><span class="body"><span class="t">' + esc(x.point) + ' <span class="pill p-red">скарга · ' + esc(x.channel) + '</span></span><span class="sub">' + esc(x.text) + " · " + esc(x.day) + "</span></span></div>"; })
@@ -843,7 +897,7 @@ function show(name, keep) {
 function goBack() { show("home"); }
 if (TG && TG.BackButton) TG.BackButton.onClick(goBack);
 
-// ---------- Toast with «Скасувати»: the action waits 4 s ----------
+// ---------- Toast with «Скасувати»: the action waits 6 s ----------
 var pending = null;
 function toast(text, undo) {
   var old = document.querySelector(".toast"); if (old) old.remove();
@@ -851,23 +905,32 @@ function toast(text, undo) {
   el.innerHTML = "<span>" + esc(text) + "</span>" + (undo ? '<button type="button">Скасувати</button>' : "");
   document.body.appendChild(el);
   if (undo) el.querySelector("button").onclick = function () { undo(); el.remove(); };
-  setTimeout(function () { el.remove(); }, undo ? 4000 : 2600);
+  setTimeout(function () { el.remove(); }, undo ? 6000 : 2600);
 }
 function later(action, args, label) {
   if (pending) { clearTimeout(pending.timer); pending.go(); }
   var p = { go: function () { pending = null; run(action, args).catch(function () {}); } };
-  p.timer = setTimeout(p.go, 4000);
+  p.timer = setTimeout(p.go, 6000);
   pending = p;
   haptic("success");
   toast(label, function () { clearTimeout(p.timer); pending = null; });
 }
 
 // ---------- Sheets ----------
+var opener = null;
 function sheet(html) {
-  $("layer").innerHTML = '<div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true"><div><span class="grab"></span>' + html + "</div></div>";
-  var f = $("layer").querySelector("textarea,input:not([type=hidden]):not([type=file])"); if (f && !TG) f.focus();
+  if (!$("layer").innerHTML) opener = document.activeElement;
+  $("layer").innerHTML = '<div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"><div tabindex="-1"><span class="grab"></span>' + html + '<button class="btn b-line b-wide" type="button" data-close>Закрити</button></div></div>';
+  var d = $("layer").querySelector(".sheet>div"), h = d.querySelector("h3"); if (h) h.id = "sheetTitle";
+  var f = d.querySelector("textarea,input:not([type=hidden]):not([type=file])");
+  (f && !TG ? f : d).focus({ preventScroll: true });
 }
-function closeSheet() { $("layer").innerHTML = ""; }
+function closeSheet() {
+  if (!$("layer").innerHTML) return;
+  $("layer").innerHTML = "";
+  if (opener && opener.isConnected) opener.focus({ preventScroll: true });
+  opener = null;
+}
 var REPEATS = [["", "Без повтору"], ["щодня", "Щодня"], ["щопонеділка", "Щопонеділка"], ["щовівторка", "Щовівторка"], ["щосереди", "Щосереди"], ["щочетверга", "Щочетверга"], ["щоп'ятниці", "Щопʼятниці"], ["щосуботи", "Щосуботи"], ["щонеділі", "Щонеділі"], ["1-го числа", "1-го числа щомісяця"]];
 function addSheet(text) {
   sheet('<h3>Нове нагадування</h3><form id="addForm" style="display:flex;flex-direction:column;gap:14px"><label for="aText">Про що нагадати<textarea id="aText" placeholder="Подзвонити дизайнеру">' + esc(text || "") + '</textarea></label>' +
@@ -1014,9 +1077,10 @@ function toggleTick(key) {
     state.trello_queue = (state.trello_queue || []).filter(function (x) { return !(x.item === item.name && x.card === card); });
     if (done !== !!item.done) state.trello_queue.push({ action: done ? "check" : "uncheck", card: card, item: item.name });
     show(current, true);
-  } else run("trello_tick", { item: item.name, card: card, done: done }).catch(function () {});
-  haptic("success");
-  toast(done ? "Виконано. У Trello поставлю галочку при синхронізації" : "Повернув у невиконані");
+    haptic("success"); toast(done ? "Виконано. У Trello поставлю галочку при синхронізації" : "Повернув у невиконані");
+  } else run("trello_tick", { item: item.name, card: card, done: done }).then(function () {
+    haptic("success"); toast(done ? "Виконано. У Trello поставлю галочку при синхронізації" : "Повернув у невиконані");
+  }).catch(function () {});
 }
 function copyPush(num) {
   var p = pushes().filter(function (x) { return x.num === num; })[0]; if (!p) return;
@@ -1030,6 +1094,9 @@ document.addEventListener("click", function (ev) {
   if (!b || b.type === "submit") return;
   var ds = b.dataset;
   if (b.id === "back") { goBack(); return; }
+  if (b.hasAttribute("data-retry")) { if (lastRead) run(lastRead[0], lastRead[1]).catch(function () {}); return; }
+  if (b.hasAttribute("data-vretry")) { vid = null; vLoaded = 0; show(current, true); return; }
+  if (b.hasAttribute("data-reload")) { $("screen").innerHTML = '<div class="skel" aria-hidden="true"><i></i><i></i><i></i></div>'; boot(); return; }
   if (b.hasAttribute("data-close")) { closeSheet(); return; }
   if (ds.go) { closeSheet(); show(ds.go); return; }
   if (ds.tab) { closeSheet(); taskTab = ds.tab; taskDir = ""; show("tasks", current === "tasks"); return; }
@@ -1129,6 +1196,15 @@ document.addEventListener("submit", function (e) {
     }).catch(function (er) { $("upBtn").disabled = false; $("upBtn").textContent = "Зберегти"; $("upInfo").textContent = er.message; });
   }
 });
+document.addEventListener("keydown", function (e) {
+  var d = $("layer").querySelector(".sheet>div"); if (!d) return;
+  if (e.key === "Escape") { e.preventDefault(); closeSheet(); return; }
+  if (e.key !== "Tab") return;
+  var f = [].filter.call(d.querySelectorAll("button,input,select,textarea,a[href],[tabindex='0']"), function (x) { return !x.disabled && x.offsetParent !== null; });
+  if (!f.length) return;
+  if (e.shiftKey && (document.activeElement === f[0] || document.activeElement === d)) { e.preventDefault(); f[f.length - 1].focus(); }
+  else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+});
 document.addEventListener("keydown", function (e) { var tk = e.target.closest && e.target.closest("[data-tick]"); if (tk && (e.key === " " || e.key === "Enter")) { e.preventDefault(); toggleTick(tk.dataset.tick); } });
 document.addEventListener("change", function (e) { if (e.target.id === "aRepeat") $("aDate").disabled = !!e.target.value; });
 
@@ -1136,7 +1212,18 @@ $("demo").hidden = !DEMO;
 var START = { push: 1, tasks: 1, projects: 1, meetings: 1, vidguky: 1, reports: 1 }[location.hash.slice(1)] ? location.hash.slice(1) : "home";
 current = START;
 window.addEventListener("hashchange", function () { var h = location.hash.slice(1); if (screens[h] && state) { closeSheet(); show(h); } });
-run("overview").catch(function () { $("screen").innerHTML = ""; });
+function boot() {
+  return run("overview").catch(function (e) {
+    $("err").hidden = true;
+    $("screen").removeAttribute("aria-busy");
+    $("screen").innerHTML = '<section class="card state" role="alert"><b>Кабінет не завантажився</b><p>' + esc(e.message) + '</p><button class="btn b-lime" type="button" data-reload>Спробувати ще раз</button></section>';
+  });
+}
+function net() { $("offline").hidden = navigator.onLine; }
+window.addEventListener("offline", net);
+window.addEventListener("online", function () { net(); if (state) run("overview").catch(function () {}); else boot(); });
+net();
+boot();
 </script>
 </body>
 </html>
