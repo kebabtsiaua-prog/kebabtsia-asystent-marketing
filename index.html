@@ -70,7 +70,9 @@ h1{font:600 24px/1.2 var(--head);margin:6px 0 0;letter-spacing:-.01em;text-wrap:
 
 .row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-top:1px solid var(--line);width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;color:inherit}
 .chead+.row,.row.first{border-top:0}
-button.row:hover{background:var(--soft)}
+button.row:hover,.rowbtn:hover{background:var(--soft)}
+.rowbtn{border:0;background:none;padding:0;text-align:left;color:inherit;display:block;border-radius:6px}
+.chk{cursor:pointer}
 .row .body{flex:1;min-width:0}
 .t{font-size:15px;line-height:1.4;font-weight:600;overflow-wrap:anywhere}
 .sub{font-size:13px;color:var(--muted);margin-top:3px;display:flex;gap:6px 8px;flex-wrap:wrap;align-items:center}
@@ -78,6 +80,7 @@ button.row:hover{background:var(--soft)}
 .chk.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .chk svg{width:14px;height:14px}
 .row.done .t{color:var(--muted);text-decoration:line-through}
+.row .rowbtn .t,.row .rowbtn .sub{display:flex}.row .rowbtn .t{display:block}
 .dotA{width:10px;height:10px;border-radius:50%;flex:none;margin-top:6px;background:var(--amb)}
 .ptime{font-weight:800;font-size:14px;width:72px;flex:none;font-variant-numeric:tabular-nums}
 .ptime.w{width:96px}
@@ -468,10 +471,16 @@ function projectRows() {
 var DIRS = [["Пуш і апка", /пуш|додат|апк|uployal|rfm|бонус|купон/i], ["Блогери і SMM", /блогер|інста|сторі|smm|рилс|тикток|контент/i], ["Франшизи", /франш/i], ["Команда", /нарад|команд|директ|діректи|юля|роман|діма|бухгалт/i], ["Партнери", /спорт|зал|тренер|bolt|glovo|колаб|партнер|спонсор/i], ["Офлайн", /промоут|точк|вітрин|друк|банер|фото/i]];
 function dirOf(name) { for (var i = 0; i < DIRS.length; i++) if (DIRS[i][1].test(name)) return DIRS[i][0]; return "Інше"; }
 function trello() { return state.trello || { today: null, tails: [], main: [], week: null }; }
+// A tick made in the app waits in the queue until the next Trello sync writes it to the board.
+function queued(card, name) { var q = (state.trello_queue || []).filter(function (x) { return x.item === name && x.card === card && x.action !== "add"; }); return q.length ? q[q.length - 1].action : null; }
+function isDone(card, item) { var q = queued(card, item.name); return q ? q === "check" : !!item.done; }
+function todayCard() { var t = trello(); return t.today ? t.today.card : ""; }
 function todayItems() { var t = trello(); return t.today ? t.today.items : []; }
 
 // ---------- Pieces ----------
 function chk(on, attrs) { return '<span class="chk' + (on ? " on" : "") + '"' + (attrs || "") + ">" + (on ? ICON.check : "") + "</span>"; }
+function tick(key, card, item) { var on = isDone(card, item); return '<span class="chk' + (on ? " on" : "") + '" role="checkbox" tabindex="0" aria-checked="' + on + '" aria-label="Виконано" data-tick="' + key + '">' + (on ? ICON.check : "") + "</span>"; }
+function waitTag(card, name) { return queued(card, name) ? '<span class="pill p-grey">піде в Trello</span>' : ""; }
 function charCnt(s, max) { var n = Array.from(s || "").length; return '<span class="cnt ' + (n > max ? "over" : "ok") + '" title="символів">' + n + "/" + max + "</span>"; }
 var LIMIT = { title: 35, body: 90 };
 function pushRow(p, opts) {
@@ -508,7 +517,7 @@ function focusItem() {
   if (w) return { kind: "reminder", r: w };
   var pr = projectRows().filter(function (r) { return r.st[1] === "wait"; })[0];
   if (pr) return { kind: "project", r: pr };
-  var open = todayItems().filter(function (i) { return !i.done; });
+  var open = todayItems().filter(function (i) { return !isDone(todayCard(), i); });
   if (open.length) return { kind: "trello", list: open };
   var t = trello().tails[0];
   if (t) return { kind: "tail", t: t };
@@ -557,10 +566,10 @@ function hotCount() {
 // ---------- Screens ----------
 var screens = {};
 screens.home = function () {
-  var items = todayItems(), done = items.filter(function (i) { return i.done; }).length, t = trello();
+  var items = todayItems(), tc = todayCard(), done = items.filter(function (i) { return isDone(tc, i); }).length, t = trello();
   var tasks = '<section class="card" aria-label="Задачі дня"><div class="chead"><h2 class="h2">Задачі дня</h2><span class="muted small" style="font-weight:600">' + done + " з " + items.length + (t.today ? " · картка " + esc(t.today.card) : "") + '</span><button class="link" type="button" data-tab="today">Усі →</button></div>' +
     (items.length ? '<div class="bar" style="margin:8px 0 8px"><i style="width:' + Math.round(done * 100 / items.length) + '%;background:var(--accent)"></i></div>' : "") +
-    (items.length ? items.filter(function (i) { return !i.done; }).slice(0, 5).map(function (i) { return '<button type="button" class="row" data-task="today:' + items.indexOf(i) + '">' + chk(false) + '<span class="body"><span class="t">' + esc(i.name) + '</span><span class="sub"><span class="tag">' + esc(dirOf(i.name)) + "</span></span></span></button>"; }).join("") : '<div class="empty"><b>На сьогодні в Trello задач немає</b>Картка дня зʼявиться в списку місяця.</div>') +
+    (items.length ? items.filter(function (i) { return !isDone(tc, i); }).slice(0, 5).map(function (i) { var n = items.indexOf(i); return '<div class="row">' + tick("today:" + n, tc, i) + '<button type="button" class="body rowbtn" data-task="today:' + n + '"><span class="t">' + esc(i.name) + '</span><span class="sub"><span class="tag">' + esc(dirOf(i.name)) + "</span></span></button></div>"; }).join("") : '<div class="empty"><b>На сьогодні в Trello задач немає</b>Картка дня зʼявиться в списку місяця.</div>') +
     (items.length - done > 5 ? '<button type="button" class="row" data-tab="today"><span class="link" style="margin-left:34px">Ще ' + (items.length - done - 5) + "</span></button>" : "") + "</section>";
   var today = dayKey(new Date());
   var rem = (state.open || []).filter(function (r) { return dayKey(new Date(r.due_at)) <= today; }).sort(byDue);
@@ -584,11 +593,12 @@ screens.home = function () {
 
 screens.tasks = function () {
   var t = trello(), items = todayItems();
-  var names = { today: ["Сьогодні", items.filter(function (i) { return !i.done; }).length], tails: ["Хвости", t.tails.length], main: ["Головне", t.main.length] };
+  var names = { today: ["Сьогодні", items.filter(function (i) { return !isDone(todayCard(), i); }).length], tails: ["Хвости", t.tails.filter(function (x) { return !isDone(x.card, x); }).length], main: ["Головне", t.main.length] };
   var seg = '<div class="seg" role="tablist">' + Object.keys(names).map(function (k) { return '<button type="button" role="tab" aria-selected="' + (k === taskTab) + '" class="' + (k === taskTab ? "on" : "") + '" data-tab="' + k + '">' + names[k][0] + "<span>" + names[k][1] + "</span></button>"; }).join("") + "</div>";
   var html = "";
   if (taskTab === "today") {
-    html = '<section class="card">' + (items.length ? items.map(function (i, n) { return '<button type="button" class="row' + (i.done ? " done" : "") + '" data-task="today:' + n + '">' + chk(i.done) + '<span class="body"><span class="t">' + esc(i.name) + '</span><span class="sub"><span class="tag">' + esc(dirOf(i.name)) + "</span></span></span></button>"; }).join("") : '<div class="empty"><b>На сьогодні в Trello задач немає</b></div>') + "</section>";
+    var tc = todayCard();
+    html = '<section class="card">' + (items.length ? items.map(function (i, n) { return '<div class="row' + (isDone(tc, i) ? " done" : "") + '">' + tick("today:" + n, tc, i) + '<button type="button" class="body rowbtn" data-task="today:' + n + '"><span class="t">' + esc(i.name) + '</span><span class="sub"><span class="tag">' + esc(dirOf(i.name)) + "</span>" + waitTag(tc, i.name) + "</span></button></div>"; }).join("") : '<div class="empty"><b>На сьогодні в Trello задач немає</b></div>') + "</section>";
   } else if (taskTab === "tails") {
     var dirs = {}; t.tails.forEach(function (x) { var d = dirOf(x.name); dirs[d] = (dirs[d] || 0) + 1; });
     var chips = '<div class="chips"><button type="button" class="chip' + (!taskDir ? " on" : "") + '" data-dir="">Усі · ' + t.tails.length + "</button>" + Object.keys(dirs).sort().map(function (d) { return '<button type="button" class="chip' + (taskDir === d ? " on" : "") + '" data-dir="' + esc(d) + '">' + esc(d) + " · " + dirs[d] + "</button>"; }).join("") + "</div>";
@@ -596,7 +606,7 @@ screens.tasks = function () {
     html = chips + '<section class="card">' + (list.length ? tailGroups(list).map(function (g) {
       var age = daysSince(g.since);
       return '<div class="grp">Картка ' + dm(new Date(g.since + "T12:00:00Z")) + ' <span class="pill ' + ageClass(age) + '">' + plural(age, "день", "дні", "днів") + "</span> · " + g.items.length + "</div>" +
-        g.items.map(function (x) { return '<button type="button" class="row" data-task="tails:' + t.tails.indexOf(x) + '">' + chk(false) + '<span class="body"><span class="t">' + esc(x.name) + '</span><span class="sub"><span class="tag">' + esc(dirOf(x.name)) + "</span></span></span></button>"; }).join("");
+        g.items.map(function (x) { var n = t.tails.indexOf(x); return '<div class="row' + (isDone(x.card, x) ? " done" : "") + '">' + tick("tails:" + n, x.card, x) + '<button type="button" class="body rowbtn" data-task="tails:' + n + '"><span class="t">' + esc(x.name) + '</span><span class="sub"><span class="tag">' + esc(dirOf(x.name)) + "</span>" + waitTag(x.card, x.name) + "</span></button></div>"; }).join("");
     }).join("") : '<div class="empty"><b>Хвостів немає</b></div>') + "</section>";
   } else {
     var byCard = {}; t.main.forEach(function (x, n) { (byCard[x.card || "Головне"] = byCard[x.card || "Головне"] || []).push([x, n]); });
@@ -733,7 +743,7 @@ var NAV = [["home", "Головна"], ["tasks", "Задачі"], ["push", "Пу
 var TABS = [["home", "Головна"], ["tasks", "Задачі"], ["push", "Пуш"], ["projects", "Проєкти"], ["more", "Ще"]];
 function badges() {
   var t = trello(), wait = projectRows().filter(function (r) { return r.st[1] === "wait"; }).length;
-  return { tasks: [todayItems().filter(function (i) { return !i.done; }).length, ""], push: [overduePushes().length, "red"], projects: [wait, ""], vidguky: [vid && vid.complaints ? vid.complaints.open : 0, "red"] };
+  return { tasks: [todayItems().filter(function (i) { return !isDone(todayCard(), i); }).length, ""], push: [overduePushes().length, "red"], projects: [wait, ""], vidguky: [vid && vid.complaints ? vid.complaints.open : 0, "red"] };
 }
 function navs() {
   var b = badges();
@@ -750,14 +760,14 @@ function navs() {
 function title(name) {
   var now = new Date(), hot = hotCount();
   if (name === "home") {
-    var n = todayItems().filter(function (i) { return !i.done; }).length;
+    var n = todayItems().filter(function (i) { return !isDone(todayCard(), i); }).length;
     return [longDate(now), (hot ? "Горить " + plural(hot, "річ", "речі", "речей") : "Нічого не горить") + (n ? ", задач на сьогодні " + n : "")];
   }
   if (name === "push") {
     var ov = overduePushes().length, up = upcomingPushes().length, wp = weekDays();
     return ["Пуш RFM · тиждень " + dm(new Date(wp[0] + "T12:00:00Z")) + "–" + dm(new Date(wp[6] + "T12:00:00Z")), (ov ? plural(ov, "пуш прострочено", "пуші прострочено", "пушів прострочено") + ", " : "") + plural(up, "пуш", "пуші", "пушів") + " у плані"];
   }
-  if (name === "tasks") { var t = trello(); return ["Trello · «Мої задачі Кебабця»", t.tails.length ? plural(t.tails.length, "хвіст", "хвости", "хвостів") + " і " + plural(todayItems().filter(function (i) { return !i.done; }).length, "задача", "задачі", "задач") + " на сьогодні" : "Задачі"]; }
+  if (name === "tasks") { var t = trello(), ot = t.tails.filter(function (x) { return !isDone(x.card, x); }).length; return ["Trello · «Мої задачі Кебабця»", ot ? plural(ot, "хвіст", "хвости", "хвостів") + " і " + plural(todayItems().filter(function (i) { return !isDone(todayCard(), i); }).length, "задача", "задачі", "задач") + " на сьогодні" : "Задачі"]; }
   if (name === "projects") { var w = projectRows().filter(function (r) { return r.st[1] === "wait"; }).length; return ["Проєкти з Claude", w ? plural(w, "проєкт чекає", "проєкти чекають", "проєктів чекають") + " тебе" : "Проєкти"]; }
   return [longDate(now), { vidguky: "Відгуки", reports: "Звіти", memory: "Памʼять", history: "Історія нагадувань" }[name]];
 }
@@ -865,10 +875,12 @@ function taskSheet(key) {
   var k = key.split(":"), t = trello(), item = k[0] === "today" ? todayItems()[+k[1]] : k[0] === "tails" ? t.tails[+k[1]] : t.main[+k[1]];
   if (!item) return;
   var ctx = k[0] === "today" ? "Сьогодні · " + (t.today ? t.today.card : "") : k[0] === "tails" ? "Хвіст з картки " + esc(item.card || "") + " · " + plural(daysSince(item.since), "день", "дні", "днів") : esc(item.card || "Головне");
+  var card = k[0] === "today" ? todayCard() : item.card || "", can = k[0] !== "main", done = can && isDone(card, item);
   sheet("<h3>" + esc(item.name) + '</h3><div class="ctx">' + ctx + " · " + esc(dirOf(item.name)) + "</div>" +
-    '<div class="btns"><button type="button" class="btn b-lime" data-remind="today" data-text="' + esc(item.name) + '">Нагадати о 18:00</button><button type="button" class="btn b-line" data-remind="tomorrow" data-text="' + esc(item.name) + '">Завтра о 10:00</button></div>' +
+    (can ? '<button type="button" class="btn ' + (done ? "b-line" : "b-lime") + ' b-wide" data-tick="' + key + '">' + (done ? "Повернути в невиконані" : ICON.check + "Виконано") + "</button>" : "") +
+    '<div class="btns"><button type="button" class="btn b-line" data-remind="today" data-text="' + esc(item.name) + '">Нагадати о 18:00</button><button type="button" class="btn b-line" data-remind="tomorrow" data-text="' + esc(item.name) + '">Завтра о 10:00</button></div>' +
     (t.board_url ? '<a class="btn b-line b-wide" href="' + esc(t.board_url) + '" target="_blank" rel="noopener">Відкрити в Trello ↗</a>' : "") +
-    '<div class="foot" style="text-align:left">Галочка звідси прямо в Trello запрацює після Етапу 2, коли підключимо ключ Trello.</div>');
+    '<div class="foot" style="text-align:left">Галочка зʼявляється тут одразу, а в Trello її ставлю при найближчій синхронізації (7:52, 13:52, 17:52).</div>');
 }
 function remSheet(id) {
   var r = (state.open || []).filter(function (x) { return x.id === id; })[0]; if (!r) return;
@@ -935,12 +947,27 @@ function readFile(file) {
 }
 
 // ---------- Clicks ----------
+function toggleTick(key) {
+  var k = key.split(":"), t = trello(), item = k[0] === "today" ? todayItems()[+k[1]] : t.tails[+k[1]];
+  if (!item) return;
+  var card = k[0] === "today" ? todayCard() : item.card || "", done = !isDone(card, item);
+  closeSheet();
+  if (DEMO) {
+    state.trello_queue = (state.trello_queue || []).filter(function (x) { return !(x.item === item.name && x.card === card); });
+    if (done !== !!item.done) state.trello_queue.push({ action: done ? "check" : "uncheck", card: card, item: item.name });
+    show(current, true);
+  } else run("trello_tick", { item: item.name, card: card, done: done }).catch(function () {});
+  haptic("success");
+  toast(done ? "Виконано. У Trello поставлю галочку при синхронізації" : "Повернув у невиконані");
+}
 function copyPush(num) {
   var p = pushes().filter(function (x) { return x.num === num; })[0]; if (!p) return;
   var text = p.title + "\n" + p.body;
   (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { haptic("success"); toast("Скопійовано заголовок і текст"); }, function () { toast("Не вдалося скопіювати, виділи текст вручну"); });
 }
 document.addEventListener("click", function (ev) {
+  var tk = ev.target.closest("[data-tick]");
+  if (tk) { toggleTick(tk.dataset.tick); return; }
   var b = ev.target.closest("button,[data-close]");
   if (!b || b.type === "submit") return;
   var ds = b.dataset;
@@ -1034,6 +1061,7 @@ document.addEventListener("submit", function (e) {
     }).catch(function (er) { $("upBtn").disabled = false; $("upBtn").textContent = "Зберегти"; $("upInfo").textContent = er.message; });
   }
 });
+document.addEventListener("keydown", function (e) { var tk = e.target.closest && e.target.closest("[data-tick]"); if (tk && (e.key === " " || e.key === "Enter")) { e.preventDefault(); toggleTick(tk.dataset.tick); } });
 document.addEventListener("change", function (e) { if (e.target.id === "aRepeat") $("aDate").disabled = !!e.target.value; });
 
 $("demo").hidden = !DEMO;

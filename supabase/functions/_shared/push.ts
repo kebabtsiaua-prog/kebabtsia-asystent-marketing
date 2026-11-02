@@ -48,6 +48,9 @@ export async function markSent(num: number, count: number | null) {
   if (count != null) patch.sent_count = count;
   patch.dirty = true;
   await db.from("as_push").update(patch).eq("num", num);
+  const { data: p } = await db.from("as_push").select("title,sent_count").eq("num", num).maybeSingle();
+  const k = kyiv(new Date()), dd = `${String(k.d).padStart(2, "0")}.${String(k.m).padStart(2, "0")}`;
+  await db.from("as_trello_queue").insert({ action: "add", card: dd, item: `Пуш №${num} надіслано${p?.sent_count != null ? `, отримали ${p.sent_count}` : ""}: ${p?.title ?? ""}` });
   await syncNow();
 }
 
@@ -97,6 +100,15 @@ async function sheetCfg(): Promise<SheetCfg | null> {
   const v = data?.value as SheetCfg | undefined;
   return v?.id && serviceAccount() ? { id: v.id, tab: v.tab || "Контент-план" } : null;
 }
+// Without a Google key on the server Claude copies the sheet (rows from row 5, columns A–T) into as_kv «push_sheet_rows»
+// at every Trello sync and writes the app's changes (rows with dirty = true) back itself.
+async function copiedRows(): Promise<string[][] | null> {
+  const { data } = await db.from("as_kv").select("value").eq("key", "push_sheet_rows").maybeSingle();
+  const v = data?.value as { rows?: string[][]; done?: boolean } | undefined;
+  if (!v?.rows || v.done) return null;
+  await db.from("as_kv").update({ value: { ...v, done: true } }).eq("key", "push_sheet_rows");
+  return v.rows;
+}
 const DAYS_SHORT = ["нд", "пн", "вт", "ср", "чт", "пт", "сб"];
 const STATUS_IN: [RegExp, string][] = [[/^надісл/i, "sent"], [/^пропущ/i, "skipped"], [/^скасов|^об.?єднан/i, "cancelled"]];
 
@@ -112,6 +124,7 @@ function sheetDate(d: string, t: string, now: Date): Date | null {
 }
 function checkOf(measure: string, due: Date): string | null {
   const p = kyiv(due);
+  if (!/перевір|звірк|сходинк/i.test(measure)) return null;
   for (const m of measure.matchAll(/(\d{2})\.(\d{2})/g)) {
     const y = +m[2] < p.m - 6 ? p.y + 1 : p.y;
     const iso = `${y}-${m[2]}-${m[1]}`;
@@ -124,9 +137,9 @@ const passed = (dueIso: string, now: number) => nagTimes(new Date(dueIso)).filte
 // The sheet → the database. A push the app already marked sent stays sent and the sheet gets that status back.
 export async function pullSheet(): Promise<Record<string, unknown>> {
   const cfg = await sheetCfg();
-  if (!cfg) return { ok: false, reason: "sheet not connected" };
-  await pushDirty(cfg);
-  const rows = await getValues(cfg.id, `${cfg.tab}!A5:T400`);
+  if (cfg) await pushDirty(cfg);
+  const rows = cfg ? await getValues(cfg.id, `${cfg.tab}!A5:T400`) : await copiedRows();
+  if (!rows) return { ok: false, reason: "sheet not connected, no new copy" };
   const now = new Date();
   const { data: have } = await db.from("as_push").select("num,due_at,status,sent_count,nags");
   const byNum = new Map((have ?? []).map((r) => [r.num, r]));
@@ -155,7 +168,7 @@ export async function pullSheet(): Promise<Record<string, unknown>> {
     out.push(row);
   });
   if (out.length) await db.from("as_push").upsert(out);
-  await pushDirty(cfg);
+  if (cfg) await pushDirty(cfg);
   return { ok: true, rows: out.length };
 }
 
