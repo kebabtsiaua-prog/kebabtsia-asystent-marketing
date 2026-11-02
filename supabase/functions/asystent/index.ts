@@ -409,7 +409,7 @@ async function tick() {
 // Files Claude queued for a set time (the weekly report on Monday morning).
 async function outbox(now: number): Promise<number> {
   const { data: due } = await db.from("as_outbox").select("id,tg_id,file_name,file_b64,caption").is("sent_at", null)
-    .lte("send_after", new Date(now).toISOString()).limit(5);
+    .not("file_b64", "is", null).lte("send_after", new Date(now).toISOString()).limit(5);
   let n = 0;
   for (const f of due ?? []) {
     const bytes = Uint8Array.from(atob(f.file_b64 ?? ""), (c) => c.charCodeAt(0));

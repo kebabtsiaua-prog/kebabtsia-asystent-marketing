@@ -3,6 +3,7 @@
 // themselves stay out of the repo, it is public. Needs Playwright with Chromium.
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 const { chromium } = createRequire(import.meta.url)("playwright");
 
 const e = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -63,7 +64,7 @@ function build(r) {
   const plan = r.plan.map((p) => `<li>${e(p)}</li>`).join("");
   const note = r.note ? `<div class="note">${e(r.note)}</div>` : "";
   return `<!doctype html><html lang="uk"><head><meta charset="utf-8">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Unbounded:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Manrope:400,500,700|Unbounded:500,600&display=swap">
 <style>${CSS}</style></head><body>
 <div class="top"><div><div class="eyebrow">Звіт про виконану роботу · маркетинг</div><h1>${e(r.period)}</h1></div>
 <div class="who"><b>${e(r.author)}</b><br>${e(r.role)}<br>Кебабця</div></div>
@@ -81,10 +82,16 @@ function build(r) {
 </body></html>`;
 }
 
-const [src, out] = process.argv.slice(2);
-const r = JSON.parse(readFileSync(src, "utf8"));
-const browser = await chromium.launch();
-const page = await browser.newPage();
-await page.setContent(build(r), { waitUntil: "networkidle" });
-await page.pdf({ path: out, format: "A4", printBackground: true, preferCSSPageSize: true });
-await browser.close();
+// Renders one report to a PDF file. Used by the command line below and by scripts/zvity-server.mjs.
+export async function render(r, out) {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  await page.setContent(build(r), { waitUntil: "networkidle" });
+  await page.pdf({ path: out, format: "A4", printBackground: true, preferCSSPageSize: true });
+  await browser.close();
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const [src, out] = process.argv.slice(2);
+  await render(JSON.parse(readFileSync(src, "utf8")), out);
+}
