@@ -1,6 +1,7 @@
 // Mini app backend. Every request: POST { initData, action, ...args }; the Telegram user is taken from initData,
 // and only people in as_people (the owner) get in.
 import { activeLocations, db } from "../_shared/common.ts";
+import { compare, markSent, movePush, pushList } from "../_shared/push.ts";
 import { openReminders, type Reminder, scheduleNext } from "../_shared/reminders.ts";
 import { sendDocument, telegramUser, tg } from "../_shared/telegram.ts";
 import { fromKyiv, kyiv, parseWhen } from "../_shared/time.ts";
@@ -34,6 +35,8 @@ async function overview(tgId: number) {
   const { data: me } = await db.from("as_people").select("name").eq("tg_id", tgId).maybeSingle();
   const { data: tasks } = await db.from("as_kv").select("value,updated_at").eq("key", "tasks").maybeSingle();
   const { data: trello } = await db.from("as_kv").select("value,updated_at").eq("key", "trello").maybeSingle();
+  const { data: pushStats } = await db.from("as_kv").select("value").eq("key", "push_stats").maybeSingle();
+  const { data: files } = await db.from("as_push_files").select("id,push_num,kind,file_name,n,created_at").order("created_at", { ascending: false }).limit(60);
   const { data: reports } = await db.from("as_outbox").select("id,file_name,caption,send_after,sent_at").eq("tg_id", tgId)
     .order("send_after", { ascending: false }).limit(8);
   return {
@@ -49,6 +52,7 @@ async function overview(tgId: number) {
     tasks: tasks ? { text: tasks.value as string, updated_at: tasks.updated_at } : null,
     trello: trello ? { ...(trello.value as object), updated_at: trello.updated_at } : null,
     reports: reports ?? [],
+    push: { list: await pushList(), files: files ?? [], stats: pushStats?.value ?? null },
   };
 }
 
@@ -133,6 +137,45 @@ async function handle(tgId: number, b: any) {
       const bytes = Uint8Array.from(atob(f!.file_b64), (c) => c.charCodeAt(0));
       must(await sendDocument(tgId, f!.file_name, bytes, f!.caption), "Telegram не прийняв файл, спробуй ще раз");
       return await overview(tgId);
+    }
+
+    // «Пуш RFM»: marked sent (with how many got it), moved, or a list file kept for the return check.
+    case "push_sent": {
+      const count = b.count === "" || b.count == null ? null : Number(String(b.count).replace(/\s/g, ""));
+      must(count == null || (Number.isInteger(count) && count >= 0), "Кількість має бути цілим числом");
+      await markSent(Number(b.num), count);
+      return await overview(tgId);
+    }
+    case "push_move": {
+      const m = String(b.date ?? "").match(/^(\d{4})-(\d{2})-(\d{2})$/), t = String(b.time ?? "").match(/^(\d{1,2}):(\d{2})$/);
+      must(m && t, "Вкажи дату і час");
+      const due = fromKyiv(+m![1], +m![2], +m![3], +t![1], +t![2]);
+      must(due.getTime() > Date.now() - 60_000, "Цей час уже минув");
+      await movePush(Number(b.num), due);
+      return await overview(tgId);
+    }
+    case "push_file": {
+      const rows = Array.isArray(b.rows) ? b.rows : [];
+      must(rows.length, "У файлі не знайшов жодного клієнта");
+      must(rows.length <= 60000, "Файл завеликий");
+      const clean = rows.map((r: Record<string, unknown>) => ({
+        i: String(r.i ?? "").slice(0, 64), g: String(r.g ?? "").slice(0, 8),
+        c: r.c == null || r.c === "" ? null : Number(r.c), l: /^\d{4}-\d{2}-\d{2}$/.test(String(r.l ?? "")) ? String(r.l) : null,
+      })).filter((r: { i: string }) => r.i);
+      must(clean.length, "У файлі не знайшов колонки з клієнтом");
+      await db.from("as_push_files").insert({
+        push_num: b.num ? Number(b.num) : null, kind: b.kind === "check" ? "check" : "sent",
+        file_name: String(b.name ?? "файл").slice(0, 120), rows: clean, n: clean.length,
+      });
+      return await overview(tgId);
+    }
+    case "push_file_delete":
+      await db.from("as_push_files").delete().eq("id", Number(b.id));
+      return await overview(tgId);
+    case "push_compare": {
+      const r = await compare(Number(b.num));
+      must(r, "Потрібні два файли: список, на який пішов пуш, і пізніший експорт");
+      return r;
     }
 
     case "memory_delete":
