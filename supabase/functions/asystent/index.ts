@@ -10,6 +10,7 @@ import { dueNag, markSent, movePush, nextDay, pullSheet, type Push } from "../_s
 import { serviceAccount } from "../_shared/sheets.ts";
 import { type Trello, trelloSummary } from "../_shared/trello.ts";
 import { vidgukySummary } from "../_shared/vidguky.ts";
+import { getPdr, markSentNote, pdrDue, savePdr, type Step, STEPS, tickStep } from "../_shared/pdr.ts";
 
 const HOUR = 3600_000;
 // Not an env secret: the «Відгуки» bot on the same server already has its own APP_URL, and secrets are shared there.
@@ -306,6 +307,18 @@ async function onCallback(cb: any) {
   const [kind, arg] = String(cb.data).split(":");
   const edit = (text: string) => tg("editMessageText", { chat_id: chat, message_id: msgId, text, parse_mode: "HTML" });
 
+  if (kind === "pdr") {
+    const [day, step] = String(arg ?? "").split(".");
+    const { pdr } = await getPdr();
+    const ok = !!pdr && tickStep(pdr, day, step as Step, true);
+    if (ok) await savePdr(pdr!);
+    const d = pdr?.days.find((x) => x.d === day);
+    const left = (cb.message?.reply_markup?.inline_keyboard?.[0] ?? []).map((b: { callback_data?: string }) => String(b.callback_data ?? "").split(".")[1])
+      .filter((s: string) => s && d && !d[s as Step]) as Step[];
+    await tg("editMessageReplyMarkup", { chat_id: chat, message_id: msgId, reply_markup: { inline_keyboard: left.length ? pdrButtons(day, left) : [] } });
+    await tg("answerCallbackQuery", { callback_query_id: cb.id, text: ok ? `Позначено: ${STEPS.find(([k]) => k === step)?.[1] ?? ""}` : "Цього дня немає в плані" });
+    return;
+  }
   if (kind === "b") {
     const options = (await kvGet<string[]>(`buttons:${me.tg_id}`)) ?? [];
     await tg("answerCallbackQuery", { callback_query_id: cb.id });
@@ -423,7 +436,7 @@ async function tick() {
     nagged++;
   }
 
-  return { ok: true, sent, nagged, missed, sheet: await sheetTick(now), pushes: await pushNags(now), files: await outbox(now), digest: await morning() };
+  return { ok: true, sent, nagged, missed, sheet: await sheetTick(now), pushes: await pushNags(now), pdr: await pdrTick(now), files: await outbox(now), digest: await morning() };
 }
 
 // Pushes from the plan: reminders keep coming (evening before, an hour before, then after the time) until «Надіслав».
@@ -470,6 +483,25 @@ async function pushNags(now: number): Promise<number> {
     n++;
   }
   return n;
+}
+
+// «ПДР»: when to study, by the plan in as_kv 'pdr'. Each reminder once a day; buttons tick the steps right in the chat.
+const pdrButtons = (day: string, steps: Step[]) => [
+  steps.map((s) => ({ text: `✓ ${STEPS.find(([k]) => k === s)![1]}`, callback_data: `pdr:${day}.${s}` })),
+  [{ text: "Відкрити ПДР в апці", web_app: { url: `${APP_URL}#pdr` } }],
+];
+async function pdrTick(now: number): Promise<number> {
+  const { pdr } = await getPdr();
+  if (!pdr) return 0;
+  const due = pdrDue(pdr, now);
+  if (!due.length) return 0;
+  const { data: people } = await db.from("as_people").select("tg_id");
+  for (const n of due) {
+    for (const { tg_id } of people ?? []) await send(tg_id, n.text, pdrButtons(n.day.d, n.buttons.filter((s) => !n.day[s])));
+    markSentNote(pdr, n.day.d, n.kind);
+  }
+  await savePdr(pdr);
+  return due.length;
 }
 
 // Files Claude queued for a set time (the weekly report on Monday morning).
