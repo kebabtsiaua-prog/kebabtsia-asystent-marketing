@@ -6,6 +6,7 @@ import { openReminders, type Reminder, scheduleNext } from "../_shared/reminders
 import { sendDocument, telegramUser, tg } from "../_shared/telegram.ts";
 import { fromKyiv, kyiv, parseWhen } from "../_shared/time.ts";
 import { vidgukyData } from "../_shared/vidguky.ts";
+import { getPdr, type Pdr, savePdr, type Step, tickStep } from "../_shared/pdr.ts";
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -42,6 +43,7 @@ async function overview(tgId: number) {
   const { data: meetings } = await db.from("as_kv").select("value,updated_at").eq("key", "meetings").maybeSingle();
   const { data: inbox } = await db.from("as_inbox").select("id,kind,project,text,answer,created_at,done_at").eq("tg_id", tgId)
     .order("id", { ascending: false }).limit(40);
+  const pdr = await getPdr();
   const { data: reports } = await db.from("as_outbox").select("id,file_name,caption,send_after,sent_at").eq("tg_id", tgId)
     .order("send_after", { ascending: false }).limit(8);
   return {
@@ -60,6 +62,7 @@ async function overview(tgId: number) {
     trello_queue: queue ?? [],
     meetings: meetings ? { ...(meetings.value as object), updated_at: meetings.updated_at } : null,
     inbox: inbox ?? [],
+    pdr: pdr.pdr ? { ...pdr.pdr, sent: undefined, updated_at: pdr.updated_at } : null,
     push: { list: await pushList(), files: files ?? [], stats: pushStats?.value ?? null, sheet_at: sheetPulled?.updated_at ?? null },
   };
 }
@@ -73,6 +76,60 @@ async function reminder(tgId: number, id: number): Promise<Reminder> {
 // The reminder's message in the chat loses its buttons once it is handled here.
 async function dropButtons(r: Reminder) {
   if (r.msg_id) await tg("editMessageReplyMarkup", { chat_id: r.tg_id, message_id: r.msg_id, reply_markup: { inline_keyboard: [] } });
+}
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const nextId = (xs: { id: number }[]) => xs.reduce((m, x) => Math.max(m, x.id), 0) + 1;
+// deno-lint-ignore no-explicit-any
+function pdrChange(p: Pdr, b: any) {
+  p.exams ??= [];
+  p.mistakes ??= [];
+  switch (b.action) {
+    case "pdr_tick":
+      must(tickStep(p, String(b.day), String(b.step) as Step, !!b.done), "Цього дня немає в плані");
+      return;
+    case "pdr_exam": {
+      const errors = Number(b.errors), minutes = b.minutes === "" || b.minutes == null ? null : Number(b.minutes);
+      must(Number.isInteger(errors) && errors >= 0 && errors <= 20, "Помилок: число від 0 до 20");
+      must(minutes == null || (Number.isInteger(minutes) && minutes > 0 && minutes <= 60), "Час: хвилини від 1 до 60");
+      const date = DAY.test(String(b.date)) ? String(b.date) : new Date().toISOString().slice(0, 10);
+      p.exams.push({ id: nextId(p.exams), date, errors, minutes });
+      return;
+    }
+    case "pdr_exam_delete":
+      p.exams = p.exams.filter((e) => e.id !== Number(b.id));
+      return;
+    case "pdr_mistake": {
+      const topic = String(b.topic ?? "").trim().slice(0, 120), why = String(b.why ?? "").trim().slice(0, 600);
+      must(topic, "Вкажи тему або розділ");
+      const date = DAY.test(String(b.date)) ? String(b.date) : new Date().toISOString().slice(0, 10);
+      p.mistakes.push({ id: nextId(p.mistakes), date, topic, why, rep: [false, false, false] });
+      return;
+    }
+    case "pdr_mistake_rep": {
+      const m = p.mistakes.find((x) => x.id === Number(b.id));
+      const i = Number(b.i);
+      must(m && i >= 0 && i < 3, "Помилку не знайдено");
+      m!.rep[i] = !!b.done;
+      return;
+    }
+    case "pdr_mistake_delete":
+      p.mistakes = p.mistakes.filter((x) => x.id !== Number(b.id));
+      return;
+    case "pdr_check": {
+      const c = p.checklist?.[Number(b.i)];
+      must(c, "Пункт не знайдено");
+      c!.done = !!b.done;
+      return;
+    }
+    case "pdr_times": {
+      const hm = /^([01]\d|2[0-3]):[0-5]\d$/;
+      for (const k of ["weekday", "weekend", "late", "night"] as const) must(hm.test(String(b[k] ?? "")), "Вкажи час у форматі 19:00");
+      must(b.weekday < b.late && b.late < b.night && b.weekend < b.night, "Порядок: початок, потім «ще не позначено», потім «перед сном»");
+      p.times = { weekday: b.weekday, weekend: b.weekend, late: b.late, night: b.night };
+      return;
+    }
+  }
 }
 
 // deno-lint-ignore no-explicit-any
@@ -208,6 +265,22 @@ async function handle(tgId: number, b: any) {
       const r = await compare(Number(b.num));
       must(r, "Потрібні два файли: список, на який пішов пуш, і пізніший експорт");
       return r;
+    }
+
+    // «ПДР»: personal study plan. Steps of a day, the practice-exam log, the mistakes log with 1/3/7-day repeats, the pre-exam checklist.
+    case "pdr_tick":
+    case "pdr_exam":
+    case "pdr_exam_delete":
+    case "pdr_mistake":
+    case "pdr_mistake_rep":
+    case "pdr_mistake_delete":
+    case "pdr_check":
+    case "pdr_times": {
+      const { pdr } = await getPdr();
+      must(pdr, "План ПДР ще не завантажено");
+      pdrChange(pdr!, b);
+      await savePdr(pdr!);
+      return await overview(tgId);
     }
 
     case "memory_delete":

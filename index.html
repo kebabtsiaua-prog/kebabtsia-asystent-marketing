@@ -330,6 +330,7 @@ var ICON = {
   vidguky: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.5 5.3 5.8.7-4.3 4 1.1 5.7L12 16.4l-5.1 2.8 1.1-5.7-4.3-4 5.8-.7z"/></svg>',
   reports: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 20v-8M12 20V5M18 20v-5"/></svg>',
   memory: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11l3 3v13H5z"/><path d="M9 4v5h6V4"/></svg>',
+  pdr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 14v7M10.3 11 3.5 9.5M13.7 11l6.8-1.5"/></svg>',
   history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>',
   more: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>'
 };
@@ -342,6 +343,12 @@ function demoData() {
   var dueNow = new Date(now - 112 * 6e4); dueNow.setMinutes(0, 0, 0);
   return {
     name: "Приклад", now: new Date().toISOString(),
+    pdr: { title: "Теоретичний іспит (приклад)", exam_from: day(9), exam_to: day(11), exam_info: "Приклад плану: справжній план зберігається лише на сервері.", times: { weekday: "19:00", weekend: "11:00", late: "21:00", night: "22:30" },
+      stages: [{ n: 1, name: "правила", from: day(-2), to: day(3) }, { n: 2, name: "пробні іспити", from: day(4), to: day(8) }],
+      rules: ["Розумій правило, а не зубри відповідь."],
+      days: [-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8].map(function (n, i) { return { d: day(n), stage: n < 4 ? 1 : 2, plan: n < 4 ? "Розділ " + (i + 1) + " правил і тести теми." : "Пробний іспит ×2 і розбір помилок.", book: n < 0, tests: n < 0, night: n === -2 }; }),
+      exams: [{ id: 1, date: day(-1), errors: 3, minutes: 18 }], mistakes: [{ id: 1, date: day(-1), topic: "Перехрестя", why: "Не врахував знак пріоритету", rep: [false, false, false] }],
+      checklist: [{ t: "Запис на іспит", done: false }, { t: "Паспорт, ІПН", done: true }] },
     open: [
       { id: 1, text: "Подзвонити дизайнеру щодо макета вітрини", due_at: new Date(now - 2 * h).toISOString(), status: "sent", repeat: null },
       { id: 2, text: "Перевірити звіт по купону", due_at: new Date(now + 3 * h).toISOString(), status: "pending", repeat: null },
@@ -436,6 +443,15 @@ function demoCall(action, a) {
   var p = s.push && s.push.list.filter(function (x) { return x.num === Number(a.num); })[0];
   if (action === "push_sent" && p) { p.status = "sent"; p.sent_at = p.sent_at || new Date().toISOString(); if (a.count !== "" && a.count != null) p.sent_count = Number(String(a.count).replace(/\s/g, "")); }
   if (action === "push_move" && p) { p.due_at = new Date(a.date + "T" + a.time + ":00+02:00").toISOString(); p.status = "plan"; }
+  var pd = s.pdr;
+  if (action === "pdr_tick" && pd) pd.days.forEach(function (d) { if (d.d === a.day) d[a.step] = !!a.done; });
+  if (action === "pdr_exam" && pd) pd.exams.push({ id: Date.now(), date: a.date, errors: Number(a.errors), minutes: a.minutes ? Number(a.minutes) : null });
+  if (action === "pdr_exam_delete" && pd) pd.exams = pd.exams.filter(function (e) { return e.id !== a.id; });
+  if (action === "pdr_mistake" && pd) pd.mistakes.push({ id: Date.now(), date: a.date, topic: a.topic, why: a.why, rep: [false, false, false] });
+  if (action === "pdr_mistake_rep" && pd) pd.mistakes.forEach(function (m) { if (m.id === a.id) m.rep[a.i] = !!a.done; });
+  if (action === "pdr_mistake_delete" && pd) pd.mistakes = pd.mistakes.filter(function (m) { return m.id !== a.id; });
+  if (action === "pdr_check" && pd) pd.checklist[a.i].done = !!a.done;
+  if (action === "pdr_times" && pd) pd.times = { weekday: a.weekday, weekend: a.weekend, late: a.late, night: a.night };
   if (action === "push_file") window.lastRows = a.rows;
   if (action === "push_file") s.push.files.unshift({ id: Date.now(), push_num: a.num ? Number(a.num) : null, kind: a.kind, file_name: a.name, n: a.rows.length, created_at: new Date().toISOString() });
   if (action === "inbox_add") s.inbox.unshift({ id: Date.now(), kind: a.kind, project: a.project || "", text: a.text, created_at: new Date().toISOString(), done_at: null, answer: null });
@@ -671,7 +687,7 @@ screens.home = function () {
     (mo.length ? '<div class="stat" style="margin:4px 0 8px"><span class="num">' + mo.length + '</span><span class="muted small" style="font-weight:600">не закрито' + (lastM ? ", остання нарада " + esc(lastM.name) : "") + "</span></div>" +
       mo.slice(0, 3).map(function (o) { return '<div class="row">' + tick("meet:" + o.mi + ":" + o.ii, meetCard(o.m), o.it) + '<span class="body"><span class="t">' + esc(o.it.name) + '</span><span class="sub">нарада ' + esc(o.m.name) + "</span></span></div>"; }).join("")
       : '<div class="empty">Усі пункти з нарад закриті.</div>') + "</section>";
-  return '<div class="cols"><div class="colL">' + focusCard() + tasks + reminders + '</div><div class="colR">' + pushCard + waitCard + meetCardH + tailCard + "</div></div>";
+  return '<div class="cols"><div class="colL">' + focusCard() + tasks + reminders + pdrTodayCard(true) + '</div><div class="colR">' + pushCard + waitCard + meetCardH + tailCard + "</div></div>";
 };
 
 screens.tasks = function () {
@@ -796,6 +812,92 @@ screens.meetings = function () {
   return '<div class="wrap" style="gap:16px">' + head + cards + arch + '<div class="foot">Джерело: Trello, картка «НАРАДА МАРКЕТИНГ» · оновлено ' + dm(new Date(state.meetings.updated_at)) + "</div></div>";
 };
 
+// ---------- ПДР: personal study plan for the driving theory exam (plan text comes from the server, not this file) ----------
+var PDR_STEPS = [["book", "Книга", "читаєш розділ дня"], ["tests", "Тести теми", "Green Way, «Питання до теми»"], ["night", "Дорогою / перед сном", "10–15 питань, «Робота над помилками»"]];
+var REP = [1, 3, 7], pdrOpen = 0;
+function pdr() { return state && state.pdr; }
+function pdrDay(key) { var p = pdr(); return p ? p.days.filter(function (d) { return d.d === key; })[0] : null; }
+function pdrLeft(d) { return PDR_STEPS.filter(function (s) { return !d[s[0]]; }).length; }
+function pdrSt(d) {
+  var today = dayKey(new Date()), left = pdrLeft(d);
+  if (!left) return ["done", "зроблено", "p-lime"];
+  if (d.d > today) return ["plan", "попереду", "p-grey"];
+  if (d.d === today) return ["today", left === 3 ? "сьогодні" : "ще " + left + " з 3", "p-amb"];
+  return [left === 3 ? "miss" : "part", left === 3 ? "пропущено" : "зроблено " + (3 - left) + " з 3", "p-red"];
+}
+function pdrAdd(day, n) { return new Date(Date.parse(day + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10); }
+function pdrReps(day) {
+  var p = pdr(); if (!p) return [];
+  return (p.mistakes || []).map(function (m) { var i = -1; REP.some(function (n, k) { if (!m.rep[k] && pdrAdd(m.date, n) <= day) { i = k; return true; } return false; }); return i >= 0 ? { m: m, i: i } : null; }).filter(Boolean);
+}
+function pdrReady() { var last = (pdr().exams || []).slice(-10); return { ok: last.filter(function (e) { return e.errors <= 1; }).length, of: last.length }; }
+function pdrBox(day, s, d) {
+  var on = !!d[s[0]];
+  return '<button type="button" class="row' + (on ? " done" : "") + '" role="checkbox" aria-checked="' + on + '" data-pdr="' + day + "." + s[0] + '"><span class="chk' + (on ? " on" : "") + '" aria-hidden="true">' + (on ? ICON.check : "") + '</span><span class="body"><span class="t">' + s[1] + '</span><span class="sub">' + s[2] + "</span></span></button>";
+}
+function pdrRepRow(x) {
+  return '<button type="button" class="row" role="checkbox" aria-checked="false" data-rep="' + x.m.id + ":" + x.i + '"><span class="chk" aria-hidden="true"></span><span class="body"><span class="t">' + esc(x.m.topic) + '</span><span class="sub"><span class="tag">повтор через ' + REP[x.i] + " д</span>" + esc(x.m.why) + "</span></span></button>";
+}
+function pdrTodayCard(home) {
+  var p = pdr(), today = dayKey(new Date()), d = pdrDay(today);
+  if (!p) return "";
+  var n = d ? p.days.indexOf(d) + 1 : 0, reps = pdrReps(today);
+  var head = '<div class="chead"><h2 class="h2">ПДР' + (d ? " · день " + n + " з " + p.days.length : "") + "</h2>" + (home ? '<button class="link" type="button" data-go="pdr">Увесь план →</button>' : "") + "</div>";
+  if (!d) {
+    if (home && today > p.days[p.days.length - 1].d) return "";
+    return '<section class="card">' + head + '<div class="empty">' + (today < p.days[0].d ? "План починається " + dm(new Date(p.days[0].d + "T12:00:00Z")) + "." : "Дні плану закінчились. Бажана дата іспиту " + dm(new Date(p.exam_from + "T12:00:00Z")) + "–" + dm(new Date(p.exam_to + "T12:00:00Z")) + ".") + "</div></section>";
+  }
+  if (home && !pdrLeft(d) && !reps.length) return '<section class="card" aria-label="ПДР">' + head + '<div class="row"><span class="chk on" aria-hidden="true">' + ICON.check + '</span><span class="body"><span class="t">Сьогоднішній день плану зроблено</span><span class="sub">' + esc(d.plan) + "</span></span></div></section>";
+  return '<section class="card" aria-label="ПДР сьогодні">' + head + '<p class="sub" style="font-size:14.5px;color:var(--ink);margin:4px 0 6px;line-height:1.45">' + esc(d.plan) + "</p>" +
+    PDR_STEPS.map(function (s) { return pdrBox(d.d, s, d); }).join("") + (reps.length ? '<div class="flabel">Повтор помилок</div>' + reps.map(pdrRepRow).join("") : "") + "</section>";
+}
+screens.pdr = function () {
+  var p = pdr();
+  if (!p) return '<section class="card"><div class="empty"><b>План ПДР ще не завантажено</b>Надішли план у чат проєкту, і я його внесу.</div></section>';
+  var today = dayKey(new Date()), done = p.days.filter(function (d) { return !pdrLeft(d); }).length, r = pdrReady();
+  var toExam = Math.max(0, Math.round((Date.parse(p.exam_from + "T12:00:00Z") - Date.parse(today + "T12:00:00Z")) / 864e5));
+  var COLS = { done: "var(--accent)", today: "var(--amb-ink)", part: "var(--red-ink)", miss: "var(--red-ink)", plan: "var(--line)" };
+  var head = '<section class="card"><div class="stat"><span class="num">' + done + " з " + p.days.length + '</span><span class="muted small" style="font-weight:600">днів плану зроблено · до іспиту ' + plural(toExam, "день", "дні", "днів") + "</span></div>" +
+    '<div class="bar" style="height:12px;margin:12px 0 8px" aria-hidden="true">' + p.days.map(function (d) { return '<i style="flex:1;background:' + COLS[pdrSt(d)[0]] + '"></i>'; }).join("") + "</div>" +
+    '<div class="sub">Готовність: ' + r.ok + " з " + (r.of < 10 ? r.of + " (з 10)" : 10) + " пробних іспитів з 0–1 помилкою, треба 8 з 10. " + esc(p.exam_info || "") + "</div></section>";
+  var stages = p.stages.map(function (s) {
+    var days = p.days.filter(function (d) { return d.stage === s.n; }), sd = days.filter(function (d) { return !pdrLeft(d); }).length;
+    var cur = (pdrOpen || (p.stages.filter(function (x) { return x.from <= today && today <= x.to; })[0] || p.stages[0]).n) === s.n;
+    var rows = cur ? days.map(function (d) { var st = pdrSt(d), dt = new Date(d.d + "T12:00:00Z"); return '<button type="button" class="row" data-pdrday="' + d.d + '"><span class="ptime">' + wd(dt) + " " + dm(dt) + '</span><span class="body"><span class="t">' + esc(d.plan) + '</span></span><span class="pill ' + st[2] + '">' + st[1] + "</span></button>"; }).join("") : "";
+    return '<section class="card"><div class="chead"><h2 class="h2">Етап ' + s.n + " · " + esc(s.name) + '</h2><span class="muted small" style="font-weight:600">' + dm(new Date(s.from + "T12:00:00Z")) + "–" + dm(new Date(s.to + "T12:00:00Z")) + " · " + sd + " з " + days.length + "</span>" +
+      (cur ? "" : '<button class="link" type="button" data-pdrstage="' + s.n + '">Показати →</button>') + "</div>" + rows + "</section>";
+  }).join("");
+  var ex = (p.exams || []).slice().reverse();
+  var exams = '<section class="card"><div class="chead"><h2 class="h2">Пробні іспити</h2><span class="muted small" style="font-weight:600">' + (p.exams || []).length + '</span></div>' +
+    (ex.length ? ex.slice(0, 10).map(function (e) { return '<div class="row"><span class="ptime">' + dm(new Date(e.date + "T12:00:00Z")) + '</span><span class="body"><span class="t">' + plural(e.errors, "помилка", "помилки", "помилок") + (e.minutes ? " · " + e.minutes + " хв" : "") + '</span><span class="sub"><span class="pill ' + (e.errors <= 1 ? "p-lime" : e.errors === 2 ? "p-amb" : "p-red") + '">' + (e.errors <= 1 ? "з запасом" : e.errors === 2 ? "на межі" : "не склав би") + '</span><button type="button" class="link" style="margin:0 0 0 auto" data-pdrexdel="' + e.id + '">Видалити</button></span></span></div>'; }).join("") : '<div class="empty">Ще немає. «Іспит як в СЦ» починається з етапу 3, але можна й раніше.</div>') +
+    '<button class="btn b-line b-wide" type="button" data-sheet="pdrexam" style="margin-top:8px">+ Пробний іспит</button></section>';
+  var ms = (p.mistakes || []).slice().reverse();
+  var mist = '<section class="card"><div class="chead"><h2 class="h2">Журнал помилок</h2><span class="muted small" style="font-weight:600">' + (p.mistakes || []).length + '</span></div><div class="sub" style="margin-bottom:4px">Кожну помилку повторюю тобі через 1, 3 і 7 днів у нагадуванні.</div>' +
+    (ms.length ? ms.map(function (m) { var dt = new Date(m.date + "T12:00:00Z"); return '<div class="row"><span class="ptime">' + dm(dt) + '</span><span class="body"><span class="t">' + esc(m.topic) + '</span><span class="sub">' + esc(m.why) + "</span><span class=\"sub\">" + REP.map(function (n, k) { var on = m.rep[k]; return '<button type="button" class="chip' + (on ? " on" : "") + '" aria-pressed="' + on + '" data-rep="' + m.id + ":" + k + '">' + n + " д · " + dm(new Date(pdrAdd(m.date, n) + "T12:00:00Z")) + "</button>"; }).join("") + '<button type="button" class="link" style="margin:0 0 0 auto" data-pdrmdel="' + m.id + '">Видалити</button></span></span></div>'; }).join("") : '<div class="empty">Помилок ще не записано.</div>') +
+    '<button class="btn b-line b-wide" type="button" data-sheet="pdrmistake" style="margin-top:8px">+ Помилка</button></section>';
+  var check = '<section class="card"><div class="chead"><h2 class="h2">Чек-лист перед іспитом</h2><span class="muted small" style="font-weight:600">' + (p.checklist || []).filter(function (c) { return c.done; }).length + " з " + (p.checklist || []).length + "</span></div>" +
+    (p.checklist || []).map(function (c, i) { return '<button type="button" class="row' + (c.done ? " done" : "") + '" role="checkbox" aria-checked="' + !!c.done + '" data-pdrcheck="' + i + '"><span class="chk' + (c.done ? " on" : "") + '" aria-hidden="true">' + (c.done ? ICON.check : "") + '</span><span class="body"><span class="t">' + esc(c.t) + "</span></span></button>"; }).join("") + "</section>";
+  var rules = (p.rules || []).length ? '<section class="card"><div class="chead"><h2 class="h2">Правила, які працюють</h2></div>' + p.rules.map(function (x) { return '<div class="row"><span class="body"><span class="t" style="font-weight:600">' + esc(x) + "</span></span></div>"; }).join("") + "</section>" : "";
+  var t = p.times;
+  return '<div class="cols"><div class="colL">' + head + pdrTodayCard(false) + stages + '</div><div class="colR">' + exams + mist + check + rules + "</div></div>" +
+    '<div class="foot" style="margin-top:16px">Нагадування в боті: будні ' + t.weekday + ", вихідні " + t.weekend + ", якщо не позначено " + t.late + ", перед сном " + t.night + ' · <button type="button" class="link" style="display:inline-flex;margin:0" data-sheet="pdrtimes">Змінити час</button><br>Це особистий план, у робочі звіти не потрапляє.</div>';
+};
+function pdrDaySheet(key) {
+  var p = pdr(), d = pdrDay(key); if (!d) return;
+  var st = pdrSt(d), dt = new Date(d.d + "T12:00:00Z");
+  sheet("<h3>" + longDate(dt) + '</h3><div class="ctx"><span class="pill ' + st[2] + '">' + st[1] + "</span> День " + (p.days.indexOf(d) + 1) + " з " + p.days.length + " · етап " + d.stage + '</div><div class="box">' + esc(d.plan) + "</div><div>" + PDR_STEPS.map(function (s) { return pdrBox(d.d, s, d); }).join("") + "</div>");
+}
+function pdrExamSheet() {
+  sheet('<h3>Пробний іспит</h3><div class="ctx">«Іспит як в СЦ»: 20 питань за 20 хвилин. Склав би, якщо помилок 0–2; для готовності рахуються 0–1.</div><form id="pdrExamForm" style="display:flex;flex-direction:column;gap:14px"><div class="pair"><label for="peErr">Помилок<input id="peErr" type="number" inputmode="numeric" min="0" max="20" required></label><label for="peMin">Час, хв<input id="peMin" type="number" inputmode="numeric" min="1" max="60" placeholder="необовʼязково"></label></div><label for="peDate">Дата<input id="peDate" type="date" value="' + dayKey(new Date()) + '"></label><button class="btn b-lime b-wide" type="submit">Зберегти</button></form>');
+}
+function pdrMistakeSheet() {
+  sheet('<h3>Нова помилка</h3><div class="ctx">Нагадаю повторити через 1, 3 і 7 днів.</div><form id="pdrMistForm" style="display:flex;flex-direction:column;gap:14px"><label for="pmTopic">Тема або розділ<input id="pmTopic" placeholder="Напр.: розд. 16, перехрестя рівнозначних доріг" required></label><label for="pmWhy">Чому помилився і яке правило<textarea id="pmWhy" placeholder="Напр.: забув, що трамвай має перевагу; п. 16.12"></textarea></label><label for="pmDate">Дата<input id="pmDate" type="date" value="' + dayKey(new Date()) + '"></label><button class="btn b-lime b-wide" type="submit">Зберегти</button></form>');
+}
+function pdrTimesSheet() {
+  var t = pdr().times;
+  sheet('<h3>Час нагадувань ПДР</h3><div class="ctx">Кожне нагадування приходить раз на день і не приходить, якщо крок уже позначено.</div><form id="pdrTimesForm" style="display:flex;flex-direction:column;gap:14px"><div class="pair"><label for="ptWd">Будні, почати<input id="ptWd" type="time" value="' + t.weekday + '"></label><label for="ptWe">Вихідні, почати<input id="ptWe" type="time" value="' + t.weekend + '"></label></div><div class="pair"><label for="ptLate">Якщо не позначено<input id="ptLate" type="time" value="' + t.late + '"></label><label for="ptNight">Перед сном<input id="ptNight" type="time" value="' + t.night + '"></label></div><button class="btn b-lime b-wide" type="submit">Зберегти</button></form>');
+}
+
 screens.vidguky = function () {
   if (!vid) return '<section class="card"><div class="empty">Завантажую «Відгуки»…</div></section>';
   if (vid.error) return '<div class="err" role="alert"><span>«Відгуки» не завантажились: ' + esc(vid.error) + '</span><button type="button" data-vretry>Спробувати ще раз</button></div>';
@@ -844,11 +946,11 @@ screens.history = function () {
 };
 
 // ---------- Navigation ----------
-var NAV = [["home", "Головна"], ["tasks", "Задачі"], ["push", "Пуш RFM"], ["projects", "Проєкти"], ["meetings", "Наради"], ["vidguky", "Відгуки"], ["reports", "Звіти"], ["memory", "Памʼять"], ["history", "Історія"]];
+var NAV = [["home", "Головна"], ["tasks", "Задачі"], ["push", "Пуш RFM"], ["projects", "Проєкти"], ["meetings", "Наради"], ["vidguky", "Відгуки"], ["reports", "Звіти"], ["pdr", "ПДР"], ["memory", "Памʼять"], ["history", "Історія"]];
 var TABS = [["home", "Головна"], ["tasks", "Задачі"], ["push", "Пуш"], ["projects", "Проєкти"], ["more", "Ще"]];
 function badges() {
   var t = trello(), wait = projectRows().filter(function (r) { return r.st[1] === "wait"; }).length;
-  return { tasks: [todayItems().filter(function (i) { return !isDone(todayCard(), i); }).length, ""], push: [overduePushes().length, "red"], projects: [wait, ""], meetings: [meetOpen().length, ""], vidguky: [vid && vid.complaints ? vid.complaints.open : 0, "red"] };
+  return { tasks: [todayItems().filter(function (i) { return !isDone(todayCard(), i); }).length, ""], push: [overduePushes().length, "red"], projects: [wait, ""], meetings: [meetOpen().length, ""], pdr: [(function () { var d = pdrDay(dayKey(new Date())); return d ? pdrLeft(d) : 0; })(), ""], vidguky: [vid && vid.complaints ? vid.complaints.open : 0, "red"] };
 }
 function navs() {
   var b = badges();
@@ -856,7 +958,7 @@ function navs() {
     var x = b[n[0]];
     return (n[0] === "memory" ? '<div class="nsep"></div>' : "") + '<button type="button" class="nav' + (current === n[0] ? " on" : "") + '" data-go="' + n[0] + '"' + (current === n[0] ? ' aria-current="page"' : "") + ">" + ICON[n[0]] + n[1] + (x && x[0] ? '<span class="badge ' + x[1] + '">' + x[0] + "</span>" : "") + "</button>";
   }).join("");
-  var inMore = ["meetings", "vidguky", "reports", "memory", "history"].indexOf(current) >= 0;
+  var inMore = ["meetings", "vidguky", "reports", "pdr", "memory", "history"].indexOf(current) >= 0;
   $("tabbar").innerHTML = TABS.map(function (n) {
     var on = current === n[0] || (n[0] === "more" && inMore), x = b[n[0]];
     return '<button type="button" class="' + (on ? "on" : "") + '" ' + (n[0] === "more" ? 'data-sheet="more"' : 'data-go="' + n[0] + '"') + ">" + (x && x[0] && x[1] === "red" ? '<span class="tb">' + x[0] + "</span>" : "") + ICON[n[0]] + n[1] + "</button>";
@@ -875,6 +977,7 @@ function title(name) {
   if (name === "tasks") { var t = trello(), ot = t.tails.filter(function (x) { return !isDone(x.card, x); }).length; return ["Trello · «Мої задачі Кебабця»", ot ? plural(ot, "хвіст", "хвости", "хвостів") + " і " + plural(todayItems().filter(function (i) { return !isDone(todayCard(), i); }).length, "задача", "задачі", "задач") + " на сьогодні" : "Задачі"]; }
   if (name === "projects") { var w = projectRows().filter(function (r) { return r.st[1] === "wait"; }).length; return ["Проєкти з Claude", w ? plural(w, "проєкт чекає", "проєкти чекають", "проєктів чекають") + " тебе" : "Проєкти"]; }
   if (name === "meetings") { var mo = meetOpen().length; return ["Trello · картка «НАРАДА МАРКЕТИНГ»", mo ? plural(mo, "пункт з нарад відкритий", "пункти з нарад відкриті", "пунктів з нарад відкрито") : "Наради"]; }
+  if (name === "pdr") { var pp = pdr(), pd = pdrDay(dayKey(now)); return ["Особисте · " + (pp ? esc(pp.title) : "ПДР"), pd ? (pdrLeft(pd) ? "ПДР: сьогодні ще " + pdrLeft(pd) + " з 3" : "ПДР: сьогодні зроблено") : "ПДР"]; }
   return [longDate(now), { vidguky: "Відгуки", reports: "Звіти", memory: "Памʼять", history: "Історія нагадувань" }[name]];
 }
 function show(name, keep) {
@@ -1008,7 +1111,7 @@ function remSheet(id) {
     '<div class="btns"><button class="btn b-lime" type="button" data-act="done" data-id="' + id + '">' + ICON.check + 'Зроблено</button><button class="btn b-line" type="button" data-act="snooze" data-to="hour" data-id="' + id + '">+1 година</button><button class="btn b-line" type="button" data-act="snooze" data-to="tomorrow" data-id="' + id + '">Завтра</button></div>');
 }
 function moreSheet() {
-  sheet('<h3>Ще</h3><div>' + [["meetings", "Наради", plural(meetOpen().length, "відкритий пункт", "відкриті пункти", "відкритих пунктів")], ["vidguky", "Відгуки", "скарги й оцінки по точках"], ["reports", "Звіти", "тиждень і PDF"], ["memory", "Памʼять", plural(state.memory.length, "факт", "факти", "фактів")], ["history", "Історія нагадувань", "зроблено " + state.month.done + ", пропущено " + state.month.missed + " цього місяця"]].map(function (x, i) {
+  sheet('<h3>Ще</h3><div>' + [["meetings", "Наради", plural(meetOpen().length, "відкритий пункт", "відкриті пункти", "відкритих пунктів")], ["vidguky", "Відгуки", "скарги й оцінки по точках"], ["reports", "Звіти", "тиждень і PDF"], ["pdr", "ПДР", "особисте: план до іспиту"], ["memory", "Памʼять", plural(state.memory.length, "факт", "факти", "фактів")], ["history", "Історія нагадувань", "зроблено " + state.month.done + ", пропущено " + state.month.missed + " цього місяця"]].map(function (x, i) {
     return '<button type="button" class="row' + (i ? "" : " first") + '" data-go="' + x[0] + '">' + ICON[x[0]].replace("<svg", '<svg width="22" height="22"') + '<span class="body"><span class="t">' + x[1] + '</span><span class="sub">' + esc(x[2]) + "</span></span></button>";
   }).join("") + '</div><button class="btn b-lime b-wide" type="button" data-sheet="add">+ Нове нагадування</button>');
 }
@@ -1105,6 +1208,24 @@ document.addEventListener("click", function (ev) {
   if (ds.sheet === "plan") { planSheet(); return; }
   if (ds.sheet === "more") { moreSheet(); return; }
   if (ds.sheet === "newproj") { newProjSheet(); return; }
+  if (ds.sheet === "pdrexam") { pdrExamSheet(); return; }
+  if (ds.sheet === "pdrmistake") { pdrMistakeSheet(); return; }
+  if (ds.sheet === "pdrtimes") { pdrTimesSheet(); return; }
+  if (ds.pdr) {
+    var pk = ds.pdr.split("."), pd = pdrDay(pk[0]), on = !(pd && pd[pk[1]]);
+    b.disabled = true;
+    run("pdr_tick", { day: pk[0], step: pk[1], done: on }).then(function () { haptic("success"); toast(on ? "Позначено" : "Зняв позначку"); if ($("layer").innerHTML) pdrDaySheet(pk[0]); }).catch(function () { b.disabled = false; });
+    return;
+  }
+  if (ds.rep) { var rp = ds.rep.split(":"), rm = (pdr().mistakes || []).filter(function (x) { return x.id === Number(rp[0]); })[0], ron = !(rm && rm.rep[+rp[1]]); b.disabled = true; run("pdr_mistake_rep", { id: Number(rp[0]), i: Number(rp[1]), done: ron }).then(function () { haptic("success"); toast(ron ? "Повтор зроблено" : "Зняв позначку"); }).catch(function () { b.disabled = false; }); return; }
+  if (ds.pdrcheck != null) { var ci = Number(ds.pdrcheck), con = !pdr().checklist[ci].done; b.disabled = true; run("pdr_check", { i: ci, done: con }).then(function () { haptic("success"); }).catch(function () { b.disabled = false; }); return; }
+  if (ds.pdrday) { pdrDaySheet(ds.pdrday); return; }
+  if (ds.pdrstage) { pdrOpen = Number(ds.pdrstage); show("pdr", true); return; }
+  if (ds.pdrexdel || ds.pdrmdel) {
+    if (ds.confirm === "1") run(ds.pdrexdel ? "pdr_exam_delete" : "pdr_mistake_delete", { id: Number(ds.pdrexdel || ds.pdrmdel) }).then(function () { toast("Видалено"); }).catch(function () {});
+    else { ds.confirm = "1"; b.textContent = "Точно?"; }
+    return;
+  }
   if (ds.delinbox) { run("inbox_delete", { id: Number(ds.delinbox) }).then(function () { closeSheet(); toast("Забрав"); }).catch(function () {}); return; }
   if (ds.sheet === "upload") { var last = pushes().filter(function (x) { return x.status === "sent"; }).sort(byDue).pop(); uploadSheet(Number(ds.num) || (last || nextPush() || {}).num); return; }
   if (ds.push) { pushSheet(Number(ds.push)); return; }
@@ -1174,6 +1295,9 @@ document.addEventListener("submit", function (e) {
     var pn = $("pName").value.trim(), pt = $("pText").value.trim(); if (!pn) { $("pName").focus(); return; }
     run("inbox_add", { kind: "project", text: pn + (pt ? ": " + pt : "") }).then(function () { closeSheet(); haptic("success"); toast("Додано. Claude внесе в список при синхронізації"); }).catch(function () {});
   }
+  if (f.id === "pdrExamForm") run("pdr_exam", { errors: $("peErr").value, minutes: $("peMin").value, date: $("peDate").value }).then(function () { closeSheet(); haptic("success"); toast("Записав пробний іспит"); }).catch(function () {});
+  if (f.id === "pdrMistForm") run("pdr_mistake", { topic: $("pmTopic").value, why: $("pmWhy").value, date: $("pmDate").value }).then(function () { closeSheet(); haptic("success"); toast("Записав. Нагадаю повторити через 1, 3 і 7 днів"); }).catch(function () {});
+  if (f.id === "pdrTimesForm") run("pdr_times", { weekday: $("ptWd").value, weekend: $("ptWe").value, late: $("ptLate").value, night: $("ptNight").value }).then(function () { closeSheet(); haptic("success"); toast("Час нагадувань збережено"); }).catch(function () {});
   if (f.id === "memForm") run("memory_save", { topic: $("mTopic").value, fact: $("mFact").value, old: $("mOld").value }).then(function () { closeSheet(); toast("Збережено"); }).catch(function () {});
   if (f.id === "sentForm") {
     var num = Number(f.dataset.num), count = $("sentCount").value.trim();
@@ -1209,7 +1333,7 @@ document.addEventListener("keydown", function (e) { var tk = e.target.closest &&
 document.addEventListener("change", function (e) { if (e.target.id === "aRepeat") $("aDate").disabled = !!e.target.value; });
 
 $("demo").hidden = !DEMO;
-var START = { push: 1, tasks: 1, projects: 1, meetings: 1, vidguky: 1, reports: 1 }[location.hash.slice(1)] ? location.hash.slice(1) : "home";
+var START = { push: 1, tasks: 1, projects: 1, meetings: 1, vidguky: 1, reports: 1, pdr: 1 }[location.hash.slice(1)] ? location.hash.slice(1) : "home";
 current = START;
 window.addEventListener("hashchange", function () { var h = location.hash.slice(1); if (screens[h] && state) { closeSheet(); show(h); } });
 function boot() {
