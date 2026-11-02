@@ -6,26 +6,30 @@
 <title>Кебабця Маркетинг Асистент</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-/* Background and text follow the Telegram theme; the accent is Kebabtsia's teal. Status colours work in both themes. */
-:root{
-  --bg:var(--tg-theme-secondary-bg-color,#eef2f1); --card:var(--tg-theme-bg-color,#ffffff);
-  --ink:var(--tg-theme-text-color,#172524); --muted:var(--tg-theme-hint-color,#6c7a78);
-  --line:color-mix(in srgb,var(--muted) 22%,transparent); --soft:color-mix(in srgb,var(--muted) 12%,transparent);
-  --accent:#0f7c80; --accent-ink:#ffffff; --accent-soft:color-mix(in srgb,#0f7c80 14%,transparent);
-  --ok:#23864a; --warn:#b26b00; --bad:#c43b2f;
-  --nav:#172524; --nav-ink:#ffffff;
-  --r-card:24px; --r-tile:20px; --r-in:14px;
-}
-@media (prefers-color-scheme: dark){:root{
-  --bg:var(--tg-theme-secondary-bg-color,#0f1515); --card:var(--tg-theme-bg-color,#1a2222);
-  --ink:var(--tg-theme-text-color,#e8efee); --muted:var(--tg-theme-hint-color,#8d9b99);
-  --accent:#4db5bb; --accent-ink:#0b1c1d; --accent-soft:color-mix(in srgb,#4db5bb 18%,transparent);
-  --ok:#5fd08a; --warn:#f2b54a; --bad:#ff7e70;
-  --nav:#253131; --nav-ink:#e8efee; color-scheme:dark}}
+/* Colours: one palette (data-palette) in a light or dark variant (data-theme, from Telegram's theme).
+   --accent fills big surfaces, --accent-text is the accent for text on cards, --accent2 draws progress. */
+:root{--r-card:24px;--r-tile:20px;--r-in:14px;--ok:#2f8a4e;--warn:#a86a00;--bad:#d03b2c}
+:root,[data-palette=lime]{
+  --bg:#eef0ea;--card:#ffffff;--ink:#141613;--muted:#6d7268;
+  --accent:#c6f432;--accent-ink:#141a05;--accent-text:#4a6b00;--accent2:#4a6b00;--nav:#141613;--nav-ink:#f3f5ee}
+[data-palette=yellow]{
+  --bg:#f2f1ec;--card:#ffffff;--ink:#121212;--muted:#6e6c66;
+  --accent:#f7df3b;--accent-ink:#151300;--accent-text:#7a6500;--accent2:#121212;--nav:#121212;--nav-ink:#f7f6f1}
+[data-palette=fire]{
+  --bg:#f1f1f4;--card:#ffffff;--ink:#16171c;--muted:#6c6e78;
+  --accent:#ff5a2c;--accent-ink:#ffffff;--accent-text:#d9431a;--accent2:#3f62ff;--nav:#16171c;--nav-ink:#f4f4f7}
+[data-theme=dark]{--ok:#5fd08a;--warn:#f2b54a;--bad:#ff6b5c;color-scheme:dark}
+[data-theme=dark],[data-theme=dark][data-palette=lime]{
+  --bg:#0d0e0f;--card:#1a1c1e;--ink:#f1f3ec;--muted:#8d918a;--accent-text:#c6f432;--accent2:#c6f432;--nav:#24272a;--nav-ink:#f1f3ec}
+[data-theme=dark][data-palette=yellow]{
+  --bg:#0b0b0b;--card:#1b1b1b;--ink:#f6f5ef;--muted:#8f8d86;--accent-text:#f7df3b;--accent2:#f7df3b;--nav:#262626;--nav-ink:#f6f5ef}
+[data-theme=dark][data-palette=fire]{
+  --bg:#111216;--card:#1d1f25;--ink:#f2f2f5;--muted:#8d909b;--accent-text:#ff7a52;--accent2:#5b7cff;--nav:#272a32;--nav-ink:#f2f2f5}
+:root{--line:color-mix(in srgb,var(--muted) 24%,transparent);--soft:color-mix(in srgb,var(--muted) 13%,transparent);--accent-soft:color-mix(in srgb,var(--accent-text) 16%,transparent)}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.42 -apple-system,system-ui,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit;cursor:pointer}
-button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent-text);outline-offset:2px}
 [hidden]{display:none!important}
 /* In fullscreen Telegram draws its own buttons over the top of the page; it reports their height in --tg-*-safe-area-inset-top. */
 .app{max-width:560px;margin:0 auto;padding:calc(12px + var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right)) calc(112px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:12px}
@@ -43,7 +47,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:10px;mi
 .stack{display:flex;flex-direction:column;gap:12px}
 .list{display:flex;flex-direction:column;gap:8px}
 h2{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:6px 4px 0;font-weight:700;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-h2 button{border:0;background:none;color:var(--accent);text-transform:none;letter-spacing:0;font-size:13px;font-weight:700;padding:0}
+h2 button{border:0;background:none;color:var(--accent-text);text-transform:none;letter-spacing:0;font-size:13px;font-weight:700;padding:0}
 .empty{text-align:center;color:var(--muted);padding:22px 12px;font-size:14px}
 .empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
 .note{text-align:center;color:var(--muted);font-size:12px;padding:2px 8px}
@@ -51,7 +55,7 @@ h2 button{border:0;background:none;color:var(--accent);text-transform:none;lette
 .focus{background:var(--accent);color:var(--accent-ink);border-radius:var(--r-card);padding:18px;display:flex;flex-direction:column;gap:10px}
 .focus .ftag{align-self:flex-start;font-size:12px;font-weight:700;background:color-mix(in srgb,var(--accent-ink) 18%,transparent);padding:3px 11px;border-radius:999px}
 .focus .big{font-size:21px;line-height:1.22;font-weight:700;letter-spacing:-.01em;text-wrap:balance;overflow-wrap:anywhere}
-.focus .why{font-size:13px;opacity:.88}
+.focus .why{font-size:13px;opacity:.8}
 .focus .row{display:flex;gap:8px;flex-wrap:wrap}
 .focus .row button{border:0;border-radius:999px;padding:11px 18px;font-weight:700;font-size:14px}
 .focus .main{background:var(--accent-ink);color:var(--accent)}
@@ -88,7 +92,7 @@ h2 button{border:0;background:none;color:var(--accent);text-transform:none;lette
 .ti .rail{position:relative;align-self:stretch;display:flex;justify-content:center}
 .ti .rail::before{content:"";position:absolute;top:10px;bottom:-18px;width:2px;background:var(--line)}
 .ti:last-child .rail::before{display:none}
-.ti .rail i{position:relative;width:12px;height:12px;border-radius:50%;border:2px solid var(--accent);background:var(--card);margin-top:4px}
+.ti .rail i{position:relative;width:12px;height:12px;border-radius:50%;border:2px solid var(--accent-text);background:var(--card);margin-top:4px}
 .ti.done .rail i{background:var(--ok);border-color:var(--ok)}
 .ti.late .rail i{border-color:var(--bad)}
 .ti.done .txt{color:var(--muted);text-decoration:line-through}
@@ -103,7 +107,7 @@ h2 button{border:0;background:none;color:var(--accent);text-transform:none;lette
 .tag.bad{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
 .tag.warn{background:color-mix(in srgb,var(--warn) 17%,transparent);color:var(--warn)}
 .tag.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
-.tag.acc{background:var(--accent-soft);color:var(--accent)}
+.tag.acc{background:var(--accent-soft);color:var(--accent-text)}
 /* Tabs with counters */
 .seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px;margin:0 -2px}
 .seg::-webkit-scrollbar{display:none}
@@ -129,11 +133,20 @@ h2 button{border:0;background:none;color:var(--accent);text-transform:none;lette
 .alertrow{padding:10px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:3px}
 .alertrow:first-of-type{border-top:0}
 .alertrow .txt{overflow-wrap:anywhere}
+/* Проєкти */
+.proj{background:var(--card);border-radius:var(--r-tile);padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.proj .head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.proj .head b{font-size:15.5px;min-width:0;overflow-wrap:anywhere}
+.proj .pd,.proj .pn{font-size:13.5px;overflow-wrap:anywhere}
+.proj .pd{color:var(--muted)}
+.proj small{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:1px}
+.proj .pn{background:var(--soft);border-radius:var(--r-in);padding:9px 11px}
+.proj.done{opacity:.7}
 /* Звіти */
 .bars{display:flex;align-items:flex-end;gap:8px;height:128px;margin-top:14px}
 .bars div{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;font-size:11px;color:var(--muted);min-width:0}
 .bars i{width:100%;border-radius:10px 10px 6px 6px;background:var(--soft);display:block}
-.bars i b{display:block;background:var(--accent);border-radius:inherit;width:100%}
+.bars i b{display:block;background:var(--accent2);border-radius:inherit;width:100%}
 .bars em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
 .bars .today{color:var(--ink);font-weight:700}
 .pdf{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
@@ -167,7 +180,41 @@ textarea{min-height:70px;resize:vertical}
 .toast span{overflow-wrap:anywhere}
 .toast button{border:0;background:transparent;color:var(--accent);font-weight:700;flex:none}
 @media (prefers-reduced-motion: no-preference){.sheet>div{animation:up .22s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.4}}}
+.dash{display:flex;flex-direction:column;gap:12px}
+.a-tl{display:flex;flex-direction:column;gap:12px}
+.brand,.navbar .plus em,.navbar .desk{display:none}
 @media (min-width:700px){.kpis{grid-template-columns:repeat(4,1fr)}}
+/* Laptop: navigation moves to a left sidebar and the screens use two columns. */
+@media (min-width:960px){
+  html,body{font-size:15.5px}
+  .app{max-width:1180px;margin:0 0 0 248px;padding:calc(28px + var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px)) 40px 48px 32px;gap:16px}
+  @media (min-width:1500px){.app{margin-left:calc(248px + (100vw - 248px - 1180px) / 2)}}
+  .hi b{font-size:28px}
+  nav{top:0;right:auto;width:248px;padding:calc(16px + var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px)) 0 16px 16px;align-items:stretch}
+  .navbar{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:4px;max-width:none;height:100%;border-radius:28px;padding:20px 12px;box-shadow:none}
+  .brand{display:block;color:var(--nav-ink);padding:0 10px 18px}
+  .navbar .desk{display:flex}
+  .mob{display:none!important}
+  .brand b{display:block;font-size:20px;letter-spacing:-.01em}
+  .brand small{display:block;font-size:12px;opacity:.6}
+  .navbar button{flex-direction:row;justify-content:flex-start;gap:12px;height:48px;padding:0 14px;font-size:14.5px;border-radius:16px}
+  .navbar .plus{order:-1;height:auto;padding:0;margin-bottom:14px}
+  .navbar .plus span{width:100%;height:48px;border-radius:16px;display:flex;gap:8px;justify-content:center;align-items:center;font-weight:700}
+  .navbar .plus svg{width:20px;height:20px}
+  .navbar .plus em{display:inline;font-style:normal;font-size:14.5px}
+  .brand{order:-2}
+  .dash{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);grid-template-areas:"focus week" "tl kpi";gap:16px;align-items:start}
+  .a-focus{grid-area:focus;align-self:stretch}.a-focus .focus{height:100%;padding:24px}
+  .a-week{grid-area:week;align-self:stretch}.a-week .card{height:100%}
+  .a-kpi{grid-area:kpi}.a-tl{grid-area:tl}
+  .dash .kpis{grid-template-columns:1fr 1fr}
+  .focus .big{font-size:26px}
+  .list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+  .sheet{top:0;align-items:center;padding-left:248px}
+  .sheet>div{border-radius:28px;max-width:520px;padding:12px 22px 24px}
+  .grab{display:none}
+  .toast{bottom:32px;left:calc(50% + 124px)}
+}
 </style>
 </head>
 <body>
@@ -178,7 +225,7 @@ textarea{min-height:70px;resize:vertical}
       <div><small id="date"></small><b id="title">Привіт</b></div>
     </div>
     <div class="hbtns">
-      <button class="round" type="button" data-sheet="more" aria-label="Ще: памʼять та історія"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+      <button class="round" type="button" data-sheet="more" aria-label="Ще: звіти, памʼять та історія"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
       <button class="close" id="close" type="button" hidden>✕ Закрити</button>
     </div>
   </header>
@@ -188,11 +235,13 @@ textarea{min-height:70px;resize:vertical}
 </div>
 
 <nav><div class="navbar">
+  <div class="brand"><b>Кебабця</b><small>Маркетинг асистент</small></div>
   <button type="button" data-go="today" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v8.5a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19.5z"/></svg>Сьогодні</button>
   <button type="button" data-go="tasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="5"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>Задачі</button>
-  <button type="button" class="plus" data-sheet="add" aria-label="Нове нагадування"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></button>
+  <button type="button" class="plus" data-sheet="add" aria-label="Нове нагадування"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><em>Нове нагадування</em></span></button>
+  <button type="button" data-go="projects"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="4" width="7" height="7" rx="2"/><rect x="13.5" y="4" width="7" height="7" rx="2"/><rect x="3.5" y="14" width="7" height="7" rx="2"/><rect x="13.5" y="14" width="7" height="7" rx="2"/></svg>Проєкти</button>
   <button type="button" data-go="vidguky"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3.5l2.5 5.3 5.8.7-4.3 4 1.1 5.7L12 16.4l-5.1 2.8 1.1-5.7-4.3-4 5.8-.7z"/></svg>Відгуки</button>
-  <button type="button" data-go="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 20v-8M12 20V5M18 20v-5"/></svg>Звіти</button>
+  <button type="button" data-go="reports" class="desk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 20v-8M12 20V5M18 20v-5"/></svg>Звіти</button>
 </div></nav>
 <div id="layer"></div>
 
@@ -213,6 +262,19 @@ if (TG) {
   $("close").onclick = function () { TG.close(); };
 }
 var DEMO = !TG;
+// Palette and light/dark: Telegram's theme decides light or dark; ?palette= and ?theme= override it for previews.
+var PALETTE = "lime";
+(function () {
+  var q = new URLSearchParams(location.search), root = document.documentElement;
+  var dark = TG ? TG.colorScheme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.palette = q.get("palette") || PALETTE;
+  root.dataset.theme = q.get("theme") || (dark ? "dark" : "light");
+  if (TG) {
+    var bg = getComputedStyle(root).getPropertyValue("--bg").trim();
+    try { TG.setBackgroundColor(bg); TG.setHeaderColor(bg); TG.setBottomBarColor && TG.setBottomBarColor(bg); } catch (e) {}
+    TG.onEvent && TG.onEvent("themeChanged", function () { root.dataset.theme = TG.colorScheme === "dark" ? "dark" : "light"; });
+  }
+})();
 var state = null, vid = null, vLoaded = 0;
 var current = "today", taskTab = "today";
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
@@ -291,7 +353,7 @@ function loadVidguky() {
 function ring(pct) {
   var size = 84, r = 36, c = 2 * Math.PI * r;
   return '<svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="' + r + '" fill="none" stroke="var(--soft)" stroke-width="10"/>' +
-    (pct > 0 ? '<circle cx="42" cy="42" r="' + r + '" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + (c * Math.min(pct, 100) / 100).toFixed(1) + " " + c.toFixed(1) + '" transform="rotate(-90 42 42)"/>' : "") + "</svg>";
+    (pct > 0 ? '<circle cx="42" cy="42" r="' + r + '" fill="none" stroke="var(--accent2)" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + (c * Math.min(pct, 100) / 100).toFixed(1) + " " + c.toFixed(1) + '" transform="rotate(-90 42 42)"/>' : "") + "</svg>";
 }
 function weekCard(t) {
   if (!t || !t.week) return '<div class="card"><div class="empty"><b>Trello ще не підтягнуто</b>Оновлюю о 8:00, 14:00 і 18:00.</div></div>';
@@ -352,9 +414,9 @@ screens.today = function () {
       (r.status === "sent" && !x.done ? '<span class="tag warn">чекає «Зроблено»</span> ' : "") + esc(r.text) + "</div>" +
       (x.done ? "" : '<div class="acts"><button type="button" class="pill do" data-act="done" data-id="' + r.id + '">✓ Зроблено</button><button type="button" class="pill" data-act="snooze" data-to="hour" data-id="' + r.id + '">+1 год</button><button type="button" class="pill" data-act="snooze" data-to="tomorrow" data-id="' + r.id + '">Завтра</button></div>') + "</div></div>";
   }).join("");
-  return focusCard() + weekCard(state.trello) + kpis() +
-    '<h2>Нагадування на сьогодні <button type="button" data-sheet="plan">Весь план</button></h2>' +
-    '<div class="card">' + (tl || '<div class="empty"><b>На сьогодні нагадувань немає</b>Натисни «+» внизу, щоб поставити.</div>') + "</div>";
+  return '<div class="dash"><div class="a-focus">' + focusCard() + '</div><div class="a-week">' + weekCard(state.trello) + '</div><div class="a-kpi">' + kpis() + "</div>" +
+    '<div class="a-tl"><h2>Нагадування на сьогодні <button type="button" data-sheet="plan">Весь план</button></h2>' +
+    '<div class="card">' + (tl || '<div class="empty"><b>На сьогодні нагадувань немає</b>Натисни «+», щоб поставити.</div>') + "</div></div></div>";
 };
 
 var STATUS = [["🟢", "в роботі", "ok"], ["🟡", "чекає рішення", "warn"], ["⏸", "на паузі", ""], ["✅", "готово", "acc"]];
@@ -364,20 +426,20 @@ function projectRows() {
   return t.text.split("\n").filter(function (l) { return /^\|\s*\d+\s*\|/.test(l); }).map(function (l) {
     var c = l.split("|").slice(1, -1).map(function (x) { return x.trim().replace(/\*\*/g, "").replace(/`/g, ""); });
     var st = STATUS.filter(function (s) { return (c[2] || "").indexOf(s[0]) === 0; })[0] || ["", "", ""];
-    return { name: c[1] || "", status: st, next: c[4] || "", done: c[3] || "" };
-  }).filter(function (r) { return r.status[0] !== "✅"; });
+    var clean = function (x) { return x.replace(/\s*\([^()]*\.(md|json|html)\)/g, "").replace(/\s*\([a-z_-]+\/\)/g, ""); };
+    return { name: c[1] || "", status: st, next: clean(c[4] || ""), done: clean(c[3] || "") };
+  });
 }
 function taskLists() {
   var t = state.trello || { today: null, tails: [], main: [] };
   return {
     today: (t.today ? t.today.items : []).map(function (i) { return { name: i.name, done: i.done, tag: "Trello · сьогодні", cls: "" }; }),
     tails: t.tails.map(function (i) { var n = daysSince(i.since); return { name: i.name, tag: "висить " + plural(n, "день", "дні", "днів"), cls: n >= 3 ? "bad" : "warn" }; }),
-    main: t.main.map(function (i) { return { name: i.name, tag: i.card || "Головне", cls: "" }; }),
-    projects: projectRows().map(function (r) { return { name: r.name, tag: "проєкт · " + r.status[1], cls: r.status[2], next: r.next, project: true }; })
+    main: t.main.map(function (i) { return { name: i.name, tag: i.card || "Головне", cls: "" }; })
   };
 }
 screens.tasks = function () {
-  var L = taskLists(), names = { today: "Сьогодні", tails: "Хвости", main: "Головне", projects: "Проєкти" };
+  var L = taskLists(), names = { today: "Сьогодні", tails: "Хвости", main: "Головне" };
   var seg = Object.keys(names).map(function (k) {
     var n = k === "today" ? L.today.filter(function (i) { return !i.done; }).length : L[k].length;
     return '<button type="button" class="' + (k === taskTab ? "on" : "") + '" data-tab="' + k + '">' + names[k] + "<span>" + n + "</span></button>";
@@ -386,11 +448,31 @@ screens.tasks = function () {
     return '<button type="button" class="task' + (t.done ? " done" : "") + (t.project ? " plain" : "") + '" data-task="' + i + '">' + (t.project ? "" : '<span class="box"></span>') + '<span><span class="name">' + esc(t.name) + '</span><span class="meta"><span class="tag ' + t.cls + '">' + esc(t.tag) + "</span></span>" +
       (t.next && t.next !== "—" ? '<span class="meta" style="color:var(--muted);font-size:13px">Далі: ' + esc(t.next) + "</span>" : "") + "</span></button>";
   }).join("");
-  var empty = { today: "На сьогодні в Trello задач немає", tails: "Хвостів немає", main: "Головне на місяць не заповнене", projects: "Активних проєктів немає" }[taskTab];
+  var empty = { today: "На сьогодні в Trello задач немає", tails: "Хвостів немає", main: "Головне на місяць не заповнене" }[taskTab];
   var t = state.trello;
   return '<div class="seg">' + seg + '</div><div class="list">' + (list || '<div class="card empty"><b>' + empty + "</b></div>") + "</div>" +
-    '<div class="note">' + (taskTab === "projects" ? (state.tasks ? "Список проєктів з Claude, оновлено " + dm(new Date(state.tasks.updated_at)) : "") :
-      t ? "Trello оновлено " + dm(new Date(t.updated_at)) + " о " + hm(new Date(t.updated_at)) + " · оновлюю о 8:00, 14:00, 18:00" : "Trello ще не підтягнуто") + "</div>";
+    '<div class="note">' + (t ? "Trello оновлено " + dm(new Date(t.updated_at)) + " о " + hm(new Date(t.updated_at)) + " · оновлюю о 8:00, 14:00, 18:00" : "Trello ще не підтягнуто") + "</div>";
+};
+
+// «Проєкти»: the work list Claude keeps for this project, grouped by what it needs from you.
+var GROUPS = [["🟡", "Чекає твого рішення", "warn"], ["🟢", "В роботі", "ok"], ["⏸", "На паузі", ""], ["✅", "Готово", "acc"]];
+screens.projects = function () {
+  var rows = projectRows();
+  if (!rows.length) return '<div class="card empty"><b>Список проєктів ще не підтягнуто</b></div>';
+  var count = function (e) { return rows.filter(function (r) { return r.status[0] === e; }).length; };
+  var html = '<div class="kpis">' + GROUPS.map(function (g) {
+    return '<div class="kpi"><span class="top">' + g[1] + '</span><span class="num">' + count(g[0]) + "</span></div>";
+  }).join("") + "</div>";
+  GROUPS.forEach(function (g) {
+    var list = rows.filter(function (r) { return r.status[0] === g[0]; });
+    if (!list.length) return;
+    html += "<h2>" + g[1] + " · " + list.length + '</h2><div class="list">' + list.map(function (r) {
+      return '<div class="proj' + (g[0] === "✅" ? " done" : "") + '"><div class="head"><b>' + esc(r.name) + "</b></div>" +
+        (r.done && r.done !== "—" ? '<div class="pd"><small>Зроблено</small>' + esc(r.done) + "</div>" : "") +
+        (r.next && r.next !== "—" ? '<div class="pn"><small>Далі</small>' + esc(r.next) + "</div>" : "") + "</div>";
+    }).join("") + "</div>";
+  });
+  return html + '<div class="note">Список веде Claude у проєкті, оновлено ' + dm(new Date(state.tasks.updated_at)) + "</div>";
 };
 
 screens.vidguky = function () {
@@ -446,7 +528,7 @@ screens.history = function () {
   }).join("") : '<div class="empty">За два тижні ще нічого не закрито.</div>') + "</div>";
 };
 
-var TITLES = { tasks: "Задачі", vidguky: "Відгуки", reports: "Звіти", memory: "Памʼять", history: "Історія" };
+var TITLES = { projects: "Проєкти", tasks: "Задачі", vidguky: "Відгуки", reports: "Звіти", memory: "Памʼять", history: "Історія" };
 var SUB = { memory: 1, history: 1 };
 function show(name) {
   if (!state) return;
@@ -520,7 +602,7 @@ document.addEventListener("click", function (ev) {
   if (b.dataset.sheet === "add") { addSheet(); return; }
   if (b.dataset.sheet === "plan") { planSheet(); return; }
   if (b.dataset.sheet === "more") {
-    sheet('<h3>Ще</h3><div class="list"><button type="button" class="task plain" data-go="memory"><span><span class="name"><b>Памʼять</b></span><span class="meta"><span class="tag">' + plural(state.memory.length, "факт", "факти", "фактів") + '</span></span></span></button>' +
+    sheet('<h3>Ще</h3><div class="list"><button type="button" class="task plain mob" data-go="reports"><span><span class="name"><b>Звіти</b></span><span class="meta"><span class="tag">тиждень по днях і PDF</span></span></span></button><button type="button" class="task plain" data-go="memory"><span><span class="name"><b>Памʼять</b></span><span class="meta"><span class="tag">' + plural(state.memory.length, "факт", "факти", "фактів") + '</span></span></span></button>' +
       '<button type="button" class="task plain" data-go="history"><span><span class="name"><b>Історія нагадувань</b></span><span class="meta"><span class="tag ok">зроблено ' + state.month.done + '</span><span class="tag bad">пропущено ' + state.month.missed + "</span><span class=\"tag\">цього місяця</span></span></span></button></div>");
     return;
   }
