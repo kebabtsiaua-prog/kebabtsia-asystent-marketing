@@ -6,6 +6,8 @@ import { openReminders, type Reminder, reminderLine, scheduleNext } from "../_sh
 import { send, sendDocument, tg, tgFile, token, webhookSecret } from "../_shared/telegram.ts";
 import { FALLBACK_PROMPT } from "./prompt.ts";
 import { DAYS, fmt, fromKyiv, kyiv, kyivDay, parseWhen, two } from "../_shared/time.ts";
+import { dueNag, markSent, movePush, nextDay, pullSheet, type Push } from "../_shared/push.ts";
+import { serviceAccount } from "../_shared/sheets.ts";
 import { type Trello, trelloSummary } from "../_shared/trello.ts";
 import { vidgukySummary } from "../_shared/vidguky.ts";
 
@@ -338,6 +340,24 @@ async function onCallback(cb: any) {
     return;
   }
 
+  if (kind === "pd" || kind === "pm") {
+    const { data: p } = await db.from("as_push").select("*").eq("num", +arg).maybeSingle();
+    if (!p || p.status !== "plan") {
+      await tg("answerCallbackQuery", { callback_query_id: cb.id, text: "Цей пуш уже закрито." });
+      return;
+    }
+    if (kind === "pd") {
+      await markSent(+arg, null);
+      await edit(`✓ <b>Пуш №${arg} надіслано</b>: ${esc(p.title)}\nСкільки людей отримали, внеси в апці, розділ «Пуш».`);
+    } else {
+      const due = nextDay(p.due_at);
+      await movePush(+arg, due);
+      await edit(`○ Пуш №${arg} перенесено на ${fmt(due)}: ${esc(p.title)}`);
+    }
+    await tg("answerCallbackQuery", { callback_query_id: cb.id });
+    return;
+  }
+
   const { data } = await db.from("as_reminders").select("*").eq("id", +arg).eq("tg_id", me.tg_id).maybeSingle();
   const r = data as Reminder | null;
   if (!r || !["pending", "sent"].includes(r.status)) {
@@ -403,7 +423,53 @@ async function tick() {
     nagged++;
   }
 
-  return { ok: true, sent, nagged, missed, files: await outbox(now), digest: await morning() };
+  return { ok: true, sent, nagged, missed, sheet: await sheetTick(now), pushes: await pushNags(now), files: await outbox(now), digest: await morning() };
+}
+
+// Pushes from the plan: reminders keep coming (evening before, an hour before, then after the time) until «Надіслав».
+const pushButtons = (num: number) => [
+  [{ text: "✓ Надіслав", callback_data: `pd:${num}` }, { text: "На завтра", callback_data: `pm:${num}` }],
+  [{ text: "Відкрити в апці", web_app: { url: `${APP_URL}#push` } }],
+];
+// Every 10 minutes the push plan sheet is read again, so a change there shows up in the app and the reminders.
+async function sheetTick(now: number) {
+  const last = Number(await kvGet<number>("push_sheet_try")) || 0;
+  if (now - last < 10 * 60_000) return "not now";
+  await kvSet("push_sheet_try", now);
+  try {
+    const r = await pullSheet();
+    if (r.ok) await kvSet("push_sheet_pulled", now);
+    return r;
+  } catch (e) {
+    console.error("push sheet", e);
+    return { ok: false, reason: String(e) };
+  }
+}
+
+async function pushNags(now: number): Promise<number> {
+  const { data } = await db.from("as_push").select("*").eq("status", "plan")
+    .gte("due_at", new Date(now - 4 * 24 * HOUR).toISOString()).lte("due_at", new Date(now + 2 * 24 * HOUR).toISOString());
+  const { data: people } = await db.from("as_people").select("tg_id");
+  let n = 0;
+  for (const p of (data ?? []) as Push[]) {
+    const due = dueNag(p, now);
+    if (!due) continue;
+    const at = fmt(new Date(p.due_at));
+    const head = {
+      eve: `<b>Завтра пуш №${p.num}</b> о ${at.slice(6)}`,
+      soon: `<b>За годину пуш №${p.num}</b>, о ${at.slice(6)}`,
+      late: `<b>Пуш №${p.num} мав піти о ${at.slice(6)}</b>. Надіслав?`,
+      morning: `<b>Пуш №${p.num} досі не позначено</b> (план був ${at}). Надіслав чи переносимо?`,
+    }[due.nag.kind];
+    const text = `${head}\n${esc(p.segment)}\n\n<b>${esc(p.title)}</b>\n${esc(p.body)}`;
+    for (const { tg_id } of people ?? []) {
+      if (p.msg_id) await tg("editMessageReplyMarkup", { chat_id: tg_id, message_id: p.msg_id, reply_markup: { inline_keyboard: [] } });
+      const id = await send(tg_id, text, pushButtons(p.num));
+      await db.from("as_push").update({ nags: due.index + 1, msg_id: id ?? null }).eq("num", p.num);
+    }
+    n++;
+  }
+  return n;
 }
 
 // Files Claude queued for a set time (the weekly report on Monday morning).
@@ -462,7 +528,9 @@ async function setup() {
   ] });
   await tg("setChatMenuButton", { menu_button: { type: "web_app", text: "Апка", web_app: { url: APP_URL } } });
   const me = await tg("getMe", {});
-  return Response.json({ ok: !!hook.ok, bot: me.result?.username ?? null, webhook: hook.description ?? null });
+  // The email to share the push plan sheet with (not a secret: it is only an address).
+  const sheets = serviceAccount()?.client_email ?? "немає GOOGLE_SERVICE_ACCOUNT";
+  return Response.json({ ok: !!hook.ok, bot: me.result?.username ?? null, webhook: hook.description ?? null, sheets });
 }
 
 Deno.serve(async (req) => {
