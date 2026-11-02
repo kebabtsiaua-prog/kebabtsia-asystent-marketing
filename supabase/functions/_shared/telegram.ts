@@ -22,6 +22,19 @@ export async function send(chat: number, text: string, keyboard?: unknown[][]) {
   return out.result?.message_id as number | undefined;
 }
 
+// A file from memory, e.g. the weekly PDF report; the caption is HTML like in send().
+export async function sendDocument(chat: number, name: string, bytes: Uint8Array, caption: string) {
+  const form = new FormData();
+  form.append("chat_id", String(chat));
+  form.append("caption", caption.slice(0, 1000));
+  form.append("parse_mode", "HTML");
+  form.append("document", new Blob([bytes as Uint8Array<ArrayBuffer>], { type: "application/pdf" }), name);
+  const res = await fetch(`https://api.telegram.org/bot${token()}/sendDocument`, { method: "POST", body: form });
+  const json = await res.json();
+  if (!json.ok) console.error("telegram sendDocument", json.description);
+  return json.ok as boolean;
+}
+
 export async function webhookSecret(): Promise<string> {
   const k = await crypto.subtle.importKey("raw", new TextEncoder().encode("kebabtsia-asystent"), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const sig = new Uint8Array(await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(token())));

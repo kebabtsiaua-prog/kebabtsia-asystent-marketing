@@ -3,7 +3,7 @@
 import Anthropic from "npm:@anthropic-ai/sdk@0.133.0";
 import { activeLocations, b64, db, esc } from "../_shared/common.ts";
 import { openReminders, type Reminder, reminderLine, scheduleNext } from "../_shared/reminders.ts";
-import { send, tg, tgFile, token, webhookSecret } from "../_shared/telegram.ts";
+import { send, sendDocument, tg, tgFile, token, webhookSecret } from "../_shared/telegram.ts";
 import { FALLBACK_PROMPT } from "./prompt.ts";
 import { DAYS, fmt, fromKyiv, kyiv, kyivDay, parseWhen, two } from "../_shared/time.ts";
 import { vidgukySummary } from "../_shared/vidguky.ts";
@@ -399,7 +399,24 @@ async function tick() {
     nagged++;
   }
 
-  return { ok: true, sent, nagged, missed, digest: await morning() };
+  return { ok: true, sent, nagged, missed, files: await outbox(now), digest: await morning() };
+}
+
+// Files Claude queued for a set time (the weekly report on Monday morning).
+async function outbox(now: number): Promise<number> {
+  const { data: due } = await db.from("as_outbox").select("id,tg_id,file_name,file_b64,caption").is("sent_at", null)
+    .lte("send_after", new Date(now).toISOString()).limit(5);
+  let n = 0;
+  for (const f of due ?? []) {
+    const bytes = Uint8Array.from(atob(f.file_b64 ?? ""), (c) => c.charCodeAt(0));
+    if (!(await sendDocument(f.tg_id, f.file_name, bytes, f.caption))) {
+      await db.from("as_outbox").update({ send_after: new Date(now + HOUR).toISOString() }).eq("id", f.id); // try again in an hour
+      continue;
+    }
+    await db.from("as_outbox").update({ sent_at: new Date(now).toISOString(), file_b64: null }).eq("id", f.id);
+    n++;
+  }
+  return n;
 }
 
 // At 9:00 Kyiv: today's plan, and on the 1st the last month's done/missed. Once a day.
